@@ -10,9 +10,9 @@ from data_module.data_module import DatenModul
 sensoren = [TemperaturSensor(ad_bit=i) for i in range(2)]
 
 def full_system_test():
-    # Teste Wetterdatenabruf
-    api_key = "your_api_key_here"
-    lat, lon = 48.1351, 11.5820  # Koordinaten für München
+    # Teste Wetterdatenabruf    
+    api_key = "385eb69ad269f567adbebbee5b7c015d"
+    lat, lon = 48.491576, 9.680011  # Koordinaten für München
     weather_data = fetch_weather(api_key, lat, lon)
     print("Wetterdaten:")
     print(weather_data.head())
