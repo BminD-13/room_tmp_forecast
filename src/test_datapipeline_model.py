@@ -1,9 +1,10 @@
 import pandas as pd
-from room_model import RaumModell
-from fetch_weather import fetch_weather
-from sunpos import sunpos
-from raspi_dummy import TemperaturSensor, fetch_sensor_data
-from data_module import DatenModul
+
+from model.room_model import RaumModell
+from data_module.weather_api import fetch_weather
+from data_module.sunpos import sunpos
+from data_module.RasPiDummy import TemperaturSensor, fetch_sensor_data
+from data_module.data_module import DatenModul
 
 # Initialisiere Sensoren
 sensoren = [TemperaturSensor(ad_bit=i) for i in range(2)]

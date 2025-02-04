@@ -11,7 +11,7 @@ class RasPi:
     @staticmethod
     def readMCP3008_AI(iByte, iBit):
         if iByte == 0:
-            adc = RaspiGPIO.spi0_0.xfer2([1, (8 + iBit) << 4, 0])
+            adc = GPIO.spi0_0.xfer2([1, (8 + iBit) << 4, 0])
         wert = ((adc[1] & 3) << 8) + adc[2]
         return wert
 
@@ -21,7 +21,7 @@ class Sensor:
         self.ad_in = 0
     
     def measure(self):
-        self.ad_in = RaspiGPIO.readMCP3008_AI(0, self.ad_bit)
+        self.ad_in = GPIO.readMCP3008_AI(0, self.ad_bit)
         return self.ad_in
 
 class TemperaturSensor(Sensor):
