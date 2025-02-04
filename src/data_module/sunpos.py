@@ -1,9 +1,17 @@
 # sunpos.py
 import math
-def sunpos(when, location, refraction):
+from datetime import datetime
 
-# Extract the passed data
-    year, month, day, hour, minute, second, timezone = when
+def sunpos(when, location, refraction = 0):
+
+    # Extract Time    
+    dt = when.to_pydatetime()    # in ein datetime-Objekt umwandeln
+    utc_offset = dt.utcoffset().total_seconds() / 3600 if dt.utcoffset() else 0
+    timestamp_list = [dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, int(utc_offset)]
+    year, month, day, hour, minute, second, timezone = timestamp_list
+    print(timestamp_list)
+    
+    # Extract Location
     latitude, longitude = location
     
 # Math typing shortcuts
