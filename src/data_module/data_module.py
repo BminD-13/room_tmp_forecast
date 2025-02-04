@@ -3,25 +3,21 @@ import json
 from datetime import datetime
 
 class DatenModul:
-    def __init__(self, wetter_datei=None, sensor_datei=None, sonnenwinkel_funktion=None, aufloesung='1T'):
-        self.wetter_datei = wetter_datei
-        self.sensor_datei = sensor_datei
+    def __init__(self, fetch_weather=None, fetch_sensors=None, sonnenwinkel_funktion=None, aufloesung='1T'):
+        self.fetch_weather = fetch_weather
+        self.fetch_sensors = fetch_sensors
         self.aufloesung = aufloesung
         self.df = pd.DataFrame()
     
     def lade_wetterdaten(self):
-        if not self.wetter_datei:
-            raise ValueError("Keine Wetterdatei angegeben.")
-        with open(self.wetter_datei, 'r') as file:
-            daten = json.load(file)
-        wetter_df = pd.DataFrame(daten)
+        wetter_df = self.fetch_weather()
         wetter_df['timestamp'] = pd.to_datetime(wetter_df['timestamp'])
         return wetter_df
     
     def lade_sensordaten(self):
-        if not self.sensor_datei:
+        if not self.fetch_sensors:
             raise ValueError("Keine Sensordatei angegeben.")
-        sensor_df = pd.read_csv(self.sensor_datei)
+        sensor_df = pd.read_csv(self.fetch_sensors)
         sensor_df['timestamp'] = pd.to_datetime(sensor_df['timestamp'])
         return sensor_df
     

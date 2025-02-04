@@ -19,7 +19,6 @@ def full_system_test():
     
     # Teste Sonnenpositionsberechnung
     timestamp = pd.Timestamp.utcnow()
-    print(timestamp)
     azimuth, elevation = sunpos(timestamp, [lat, lon])
     print(f"Sonnenposition: Azimut={azimuth}, Elevation={elevation}")
     
@@ -29,11 +28,10 @@ def full_system_test():
     print(sensor_data.head())
     
     # Teste Datenmodul
-    data_module = DatenModul()
-    data_module.add_source("weather", lambda: fetch_weather(api_key, lat, lon))
-    data_module.add_source("sensors", lambda: fetch_sensor_data(sensoren))
-    data_module.add_source("sunpos", lambda: sunpos(pd.Timestamp.utcnow(), [lat, lon]))
-    data_module.collect_data()
+    data_module = DatenModul(lambda: fetch_weather(api_key, lat, lon),fetch_sensor_data(sensoren),sunpos(pd.Timestamp.utcnow(), [lat, lon]))
+    data_module.lade_wetterdaten()
+    data_module.lade_sensordaten()
+    data_module.berechne_sonnenwinkel()
     print("Gesammelte Daten:")
     print(data_module.data.head())
     
