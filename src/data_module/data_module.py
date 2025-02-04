@@ -1,13 +1,11 @@
 import pandas as pd
 import json
-import sunpos
 from datetime import datetime
 
 class DatenModul:
     def __init__(self, wetter_datei=None, sensor_datei=None, sonnenwinkel_funktion=None, aufloesung='1T'):
         self.wetter_datei = wetter_datei
         self.sensor_datei = sensor_datei
-        self.sonnenwinkel_funktion = sonnenwinkel_funktion if sonnenwinkel_funktion else sunpos.calculate_sun_position
         self.aufloesung = aufloesung
         self.df = pd.DataFrame()
     
