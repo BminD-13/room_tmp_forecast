@@ -9,7 +9,7 @@ class DataModuleStatic:
         
         # Soll-Keys für die Zuordnung (falls keine angegeben werden, Standardwerte)
         self.soll_keys = soll_keys if soll_keys else {
-            'timestamp': 'index',  # Beispielzuordnung
+            'timestamp': 'timestamp',  # Beispielzuordnung
             'SunPow': 'SunPow',
             'tmpAmbient': 'tmpAmbient',
             'tmpAmbient1': 'tmpAmbient1',
@@ -57,7 +57,7 @@ class DataModuleStatic:
     def get_df(self):
         return self.df
     
-    def get_timespan_of_df(self, start_time: str = None, end_time: str = None):
+    def get_timespan(self, start_time: str = None, end_time: str = None):
         """
         Filtert den DataFrame nach einer angegebenen Zeitspanne.
         Beide Parameter können als Strings im Format 'YYYY-MM-DD HH:MM:SS' angegeben werden.
