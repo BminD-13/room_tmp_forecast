@@ -1,15 +1,18 @@
 # sunpos.py
 import math
-from datetime import datetime
+import pandas as pd
 
 def sunpos(when, location, refraction = 0):
 
+    # Falls 'when' ein String ist, in ein pandas Timestamp umwandeln
+    if isinstance(when, str):
+        when = pd.to_datetime(when)
+
     # Extract Time    
-    dt = when.to_pydatetime()    # in ein datetime-Objekt umwandeln
+    dt = when.to_pydatetime()  # in ein datetime-Objekt umwandeln
     utc_offset = dt.utcoffset().total_seconds() / 3600 if dt.utcoffset() else 0
     timestamp_list = [dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, int(utc_offset)]
     year, month, day, hour, minute, second, timezone = timestamp_list
-    print(timestamp_list)
     
     # Extract Location
     latitude, longitude = location
