@@ -5,8 +5,9 @@ import csv
 class RaumModell:
     def __init__(self, dt, param_file=None, **kwargs):
         self.default_params = {
-            "tau_wand": 1000, "tau_speicher": 2000, "tau_raum": 500,
+            "tau_wand": 1, "tau_speicher": 1, "tau_raum": 1,
             "n_wand": 2, "n_speicher": 1, "n_raum": 3,
+            "fensterfaktor": 1
         }
 
         self.dt = dt
@@ -90,7 +91,7 @@ class RaumModell:
 
     
     def sonnenstrahlung(self, tmp, sonnenleistung, orthogonalität):
-        return tmp + sonnenleistung * orthogonalität # * self.fensterfaktor
+        return tmp + sonnenleistung * orthogonalität  * self.fensterfaktor
     
     def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität):
         tmp_wall =  	[tmp_aussen[0]] * self.n_wand

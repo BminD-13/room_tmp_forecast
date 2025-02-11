@@ -12,9 +12,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 20
-GENERATIONS = 10
-MUTATION_RATE = 0.2
+POPULATION_SIZE = 30
+GENERATIONS = 50
+MUTATION_RATE = 0.3
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -34,9 +34,10 @@ def initialize_population():
     population = []
     for _ in range(POPULATION_SIZE):
         individual = {
-            "tau_wand": np.random.uniform(0, 0.005),        # 0.003634 fitness kleiner 3Mrd
-            "tau_speicher": np.random.uniform(0, 4),      # 0.559296
-            "tau_raum": np.random.uniform(0, 0.005),        # 0.000900
+            "tau_wand": np.random.uniform(0, 0.1),          # 0.003634
+            "tau_speicher": np.random.uniform(0, 1),        # 0.559296
+            "tau_raum": np.random.uniform(0, 8),            # 0.000900
+            "fensterfaktor": np.random.uniform(0, 0.0001),  # 
         }
         population.append(individual)
     return population
