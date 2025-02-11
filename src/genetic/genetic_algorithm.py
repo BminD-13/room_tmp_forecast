@@ -1,118 +1,121 @@
 import numpy as np
-import random
+import sys
+import os
+
+sys.path.append(os.path.abspath('./src'))  
+from data_module.data_module_static import DataModuleStatic
+from model.room_model import RaumModell
 
 # ==============================
-# Konfigurationsparameter
+# Parameter für den GA
 # ==============================
-POPULATION_SIZE = 50   # Anzahl der Individuen in der Population
-GENOME_LENGTH = 10     # Anzahl der Parameter pro Individuum
-MUTATION_RATE = 0.1    # Wahrscheinlichkeit für eine Mutation
-CROSSOVER_RATE = 0.7   # Wahrscheinlichkeit für Crossover
-GENERATIONS = 100      # Anzahl der Generationen
-
-PARAMETER_BEREICHE = {
-    "tau_wand": (500, 2000),
-    "tau_speicher": (1000, 4000),
-    "tau_raum": (250, 1000),
-    "n_wand": (1, 5),
-    "n_speicher": (1, 3),
-    "n_raum": (1, 5),
-}
+POPULATION_SIZE = 100
+GENERATIONS = 50
+MUTATION_RATE = 0.1
 
 # ==============================
-# Initialisierung der Population
+# Initialisierung
 # ==============================
-def random_individual():
-    """Erzeugt eine zufällige Parameterkombination als Individuum"""
-    return {key: np.random.uniform(low, high) if "tau" in key else random.randint(low, high)
-            for key, (low, high) in PARAMETER_BEREICHE.items()}
 
 def initialize_population():
-    """Erzeugt eine Population mit zufälligen Individuen"""
-    return [random_individual() for _ in range(POPULATION_SIZE)]
+    """Erstellt die initiale Population mit zufälligen Parametern."""
+    population = []
+    for _ in range(POPULATION_SIZE):
+        individual = {
+            "tau_wand": np.random.uniform(0, 1),        # 0.173 fitness kleiner 3Mrd
+            "tau_speicher": np.random.uniform(0, 1),    # 0.903
+            "tau_raum": np.random.uniform(0, 1),        # 0.023
+        }
+        population.append(individual)
+    return population
 
 # ==============================
 # Fitness-Funktion
 # ==============================
-def fitness_function(model, dataset, real_temp):
-    """
-    Berechnet die Fitness eines Modells basierend auf der Vorhersagegenauigkeit.
 
-    :param model: Instanz von RaumModell
-    :param dataset: Eingangsgrößen für die Simulation
-    :param real_temp: Gemessene Raumtemperatur (Vergleichswerte)
-    :return: Fitness-Wert (negativer Fehler)
+def fitness_function(params, dataset, real_temp):
     """
-    # Modell laufen lassen
+    Berechnet die Fitness eines Parametersatzes durch Simulation des Modells.
+    """
+    model = RaumModell(dt=1, **params)
     predicted_temp = model.run_model(dataset)
     predicted_temp = np.array(predicted_temp)
     real_temp = np.array(real_temp)
 
-    # Falls unterschiedliche Längen, kürzen
     min_length = min(len(predicted_temp), len(real_temp))
     predicted_temp = predicted_temp[:min_length]
     real_temp = real_temp[:min_length]
-    
+
     # Zeitgewichtung
-    time_weights = np.linspace(1, 2, min_length)  # Linear steigend von 1 bis 2
-    weighted_error = np.sum((predicted_temp - real_temp)**2 * time_weights)
+    time_weights = np.linspace(1, 2, min_length)
+    weighted_error = np.sum((predicted_temp - real_temp) ** 2 * time_weights)
 
     # Gradientenvergleich
     pred_grad = np.diff(predicted_temp)
     real_grad = np.diff(real_temp)
-    gradient_error = np.sum((pred_grad - real_grad)**2)
+    gradient_error = np.sum((pred_grad - real_grad) ** 2)
 
     # Normalisierung
-    sigma_real = np.std(real_temp)  # Standardabweichung der echten Daten
-    total_error = (weighted_error + gradient_error) / (sigma_real + 1e-6)  # +1e-6 um durch 0 zu vermeiden
+    sigma_real = np.std(real_temp)
+    total_error = (weighted_error + gradient_error) / (sigma_real + 1e-6)
 
-    return -total_error  # Negativer Fehler für Maximierung im GA
+    return -total_error  # Negativer Fehler für Maximierung
 
 # ==============================
-# Selektion (Roulette Wheel)
+# Selektion
 # ==============================
+
 def selection(population, scores):
-    """Wählt ein Individuum basierend auf Fitness-Werten (Roulette-Wheel-Selection)"""
-    total_fitness = sum(scores)
-    pick = random.uniform(0, total_fitness)
-    current = 0
-    for i, score in enumerate(scores):
-        current += score
-        if current > pick:
-            return population[i]
-    return population[-1]
+    """Wählt ein Individuum proportional zur Fitness aus (Roulette-Wheel Selektion)."""
+    probabilities = np.exp(scores - np.max(scores))  # Exponentielle Normalisierung
+    probabilities /= np.sum(probabilities)
+    return population[np.random.choice(len(population), p=probabilities)]
 
 # ==============================
-# Crossover (Uniform Crossover)
+# Crossover
 # ==============================
+
 def crossover(parent1, parent2):
-    """Erzeugt ein Kind aus zwei Elternteilen (Uniform Crossover)"""
-    if random.random() < CROSSOVER_RATE:
-        child = np.array([random.choice([g1, g2]) for g1, g2 in zip(parent1, parent2)])
-    else:
-        child = parent1.copy()
+    """Mittelwert-Crossover: Mischt zwei Eltern zu einem Kind."""
+    child = {key: (parent1[key] + parent2[key]) / 2 for key in parent1}
     return child
 
 # ==============================
 # Mutation
 # ==============================
+
 def mutate(individual):
-    """Mutiert ein Individuum mit einer gewissen Wahrscheinlichkeit"""
-    for i in range(len(individual)):
-        if random.random() < MUTATION_RATE:
-            individual[i] += np.random.uniform(-0.5, 0.5)  # Kleine zufällige Änderung
-    return individual
+    """Mutiert ein Individuum durch zufällige Änderung einzelner Parameter."""
+    mutated = individual.copy()
+    for key in mutated:
+        if np.random.rand() < MUTATION_RATE:
+            if "n_" in key:
+                mutated[key] = np.clip(mutated[key] + np.random.randint(-1, 2), 1, 5)
+            else:
+                mutated[key] *= np.random.uniform(0.9, 1.1)  # ±10% Mutation
+    return mutated
 
 # ==============================
 # Genetischer Algorithmus
 # ==============================
+
 def genetic_algorithm():
-    """Führt den genetischen Algorithmus aus"""
-    population = initialize_population()
+    """Führt den genetischen Algorithmus aus und optimiert das Modell."""
     
+    # Daten laden
+    DataModule = DataModuleStatic()
+    DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
+    start, end = DataModule.get_time_range()
+    DataModule.get_timespan(start, end)
+    dataset = DataModule.df
+    real_temp = dataset["tmpRoom"]
+
+    # Population initialisieren
+    population = initialize_population()
+
     for generation in range(GENERATIONS):
-        scores = [fitness_function(ind) for ind in population]
-        
+        scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+
         # Neue Population generieren
         new_population = []
         for _ in range(POPULATION_SIZE // 2):
@@ -121,19 +124,22 @@ def genetic_algorithm():
             child1 = mutate(crossover(parent1, parent2))
             child2 = mutate(crossover(parent2, parent1))
             new_population.extend([child1, child2])
-        
+
         population = new_population
-        
+
         # Ausgabe des besten Individuums pro Generation
         best_fitness = max(scores)
         best_individual = population[np.argmax(scores)]
         print(f"Generation {generation+1}: Beste Fitness = {best_fitness:.4f}")
+        print(f"Bester Parametersatz: {best_individual}")
 
-    # Bestes Individuum zurückgeben
     return best_individual
 
 # ==============================
-# Algorithmus ausführen
+# Starten des Algorithmus
 # ==============================
-best_solution = genetic_algorithm()
-print("Beste gefundene Lösung:", best_solution)
+
+if __name__ == "__main__":
+    best_params = genetic_algorithm()
+    print("\nOptimierte Modellparameter:")
+    print(best_params)

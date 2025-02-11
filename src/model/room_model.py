@@ -117,7 +117,6 @@ class RaumModell:
     def run_model(self, dataset):
 
         sunOrtho = self.orthogonalität(dataset["azimuth"], dataset["elevation"], 180, 0)
-        print(dataset["tmpAmbient"])
 
         return  self.raumtemperatur_model(
                     tmp_0          = 21.5357487923,
