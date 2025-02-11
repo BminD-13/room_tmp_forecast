@@ -10,10 +10,16 @@ DataModule = DataModuleStatic()
 DataModule.load_csv(r"data\training\240331_Dataset.csv")
 
 # Zeitbereich abrufen
-start, end = DataModule.get_time_range()
+#start, end = DataModule.get_time_range()
 
-print( DataModule.get_timespan(start, end))
+#DataModule.get_timespan(start, end)
 
-Raum = RaumModell()
+Raum = RaumModell(dt = 1)
 
-Raum
+tmp = Raum.raumtemperatur_model(tmp_0          = 21.5357487923,
+                                tmp_aussen     = DataModule.df["tmpAmbient1"],
+                                sonnenleistung = DataModule.df["SunPow"],
+                                orthogonalität = DataModule.df["sunOrtho"]
+                                )
+
+print(tmp)
