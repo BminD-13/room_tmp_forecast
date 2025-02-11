@@ -12,9 +12,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 25
-GENERATIONS = 30
-MUTATION_RATE = 0.3
+POPULATION_SIZE = 20
+GENERATIONS = 10
+MUTATION_RATE = 0.2
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -34,8 +34,8 @@ def initialize_population():
     population = []
     for _ in range(POPULATION_SIZE):
         individual = {
-            "tau_wand": np.random.uniform(0, 0.05),        # 0.003634 fitness kleiner 3Mrd
-            "tau_speicher": np.random.uniform(0, 1),      # 0.559296
+            "tau_wand": np.random.uniform(0, 0.005),        # 0.003634 fitness kleiner 3Mrd
+            "tau_speicher": np.random.uniform(0, 4),      # 0.559296
             "tau_raum": np.random.uniform(0, 0.005),        # 0.000900
         }
         population.append(individual)
@@ -96,7 +96,30 @@ def mutate(individual):
     return mutated
 
 # ==============================
-# Genetischer Algorithmus mit Logging
+# Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
+# ==============================
+def plot_prediction_vs_actual(best_params, dataset, real_temp, log_dir):
+    """Plottet die Modellvorhersage gegen die tatsächlichen Werte."""
+    model = RaumModell(dt=1, **best_params)
+    predicted_temp = model.run_model(dataset)
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(real_temp, label="Tatsächliche Temperatur", color="blue", linestyle="-")
+    plt.plot(predicted_temp, label="Vorhersage", color="red", linestyle="dashed")
+    plt.xlabel("Zeit")
+    plt.ylabel("Temperatur [°C]")
+    plt.title("Modellvorhersage vs. Tatsächliche Temperatur")
+    plt.legend()
+    plt.grid(True)
+
+    # Speichern des Plots
+    plt.savefig(os.path.join(log_dir, "prediction_vs_actual.png"))
+    plt.close()
+
+    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
+
+# ==============================
+# Genetischer Algorithmus mit Logging & Vergleichsplot
 # ==============================
 def genetic_algorithm():
     """Führt den genetischen Algorithmus aus und speichert Ergebnisse."""
@@ -147,9 +170,13 @@ def genetic_algorithm():
     # Fitness-Plot speichern
     plot_fitness(fitness_history, log_dir)
 
+    # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
+    plot_prediction_vs_actual(best_individual, dataset, real_temp, log_dir)
+
     print("\nOptimierung abgeschlossen!")
     print(f"Beste Parameter gespeichert unter: {log_dir}/best_params_per_epoch.json")
     print(f"Fitness-Plot gespeichert unter: {log_dir}/fitness_plot.png")
+    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
 
     return best_individual
 
