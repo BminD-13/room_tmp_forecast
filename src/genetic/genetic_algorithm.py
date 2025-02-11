@@ -13,7 +13,7 @@ from model.room_model import RaumModell
 # Parameter für den GA
 # ==============================
 POPULATION_SIZE = 30
-GENERATIONS = 50
+GENERATIONS = 10
 MUTATION_RATE = 0.3
 
 # ==============================
@@ -22,7 +22,7 @@ MUTATION_RATE = 0.3
 def create_log_directory():
     """Erstellt ein neues Log-Verzeichnis mit Zeitstempel."""
     timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_dir = os.path.join("./data/logged", timestamp)
+    log_dir = os.path.join("./data/logged/short_dataset", timestamp)
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 
@@ -119,8 +119,10 @@ def plot_prediction_vs_actual(best_params, dataset, real_temp, log_dir):
 
     print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
 
+import random
+
 # ==============================
-# Genetischer Algorithmus mit Logging & Vergleichsplot
+# Genetischer Algorithmus mit frischem Blut und Behalten des besten Individuums
 # ==============================
 def genetic_algorithm():
     """Führt den genetischen Algorithmus aus und speichert Ergebnisse."""
@@ -153,16 +155,26 @@ def genetic_algorithm():
 
         print(f"Generation {generation+1}: Beste Fitness = {best_fitness:.4f}")
 
-        # Neue Population generieren
-        new_population = []
-        for _ in range(POPULATION_SIZE // 2):
-            parent1 = selection(population, scores)
-            parent2 = selection(population, scores)
+        # Auswahl der besten 8 Individuen (mit hoher Fitness)
+        selected_parents = selection_for_best(population, scores, num_parents=8)
+
+        # Erstellen von Nachkommen durch Crossover und Mutation (6 Individuen)
+        new_children = []
+        while len(new_children) < 6:
+            parent1, parent2 = random.sample(selected_parents, 2)
             child1 = mutate(crossover(parent1, parent2))
             child2 = mutate(crossover(parent2, parent1))
-            new_population.extend([child1, child2])
+            new_children.extend([child1, child2])
 
-        population = new_population
+        # Erstellen von zufälligen Individuen (6 Individuen)
+        random_individuals = [random_individual() for _ in range(6)]
+
+        # Neue Population generieren (beste 8 Individuen + 6 durch Crossover + 6 zufällige)
+        population = selected_parents + new_children + random_individuals
+
+        # Sicherstellen, dass das beste Individuum immer erhalten bleibt
+        if best_individual not in population:
+            population[random.randint(0, len(population) - 1)] = best_individual
 
     # Beste Parameter in JSON speichern
     with open(os.path.join(log_dir, "best_params_per_epoch.json"), "w") as f:
@@ -180,6 +192,33 @@ def genetic_algorithm():
     print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
 
     return best_individual
+
+# ==============================
+# Auswahl der besten Individuen
+# ==============================
+def selection_for_best(population, scores, num_parents):
+    """Wählt die besten Individuen basierend auf ihrer Fitness aus."""
+    # Paare (Individuum, Fitness) und sortieren nach Fitness
+    indexed_population = list(zip(population, scores))
+    sorted_population = sorted(indexed_population, key=lambda x: x[1], reverse=True)
+    
+    # Wählen der besten `num_parents` Individuen
+    selected_parents = [indiv for indiv, _ in sorted_population[:num_parents]]
+    
+    return selected_parents
+
+# ==============================
+# Zufälliges Individuum generieren
+# ==============================
+def random_individual():
+    """Generiert ein zufälliges Individuum."""
+    random_params = {
+        "tau_wand": np.random.uniform(0, 0.1),
+        "tau_speicher": np.random.uniform(0, 1),
+        "tau_raum": np.random.uniform(0, 8),
+        "fensterfaktor": np.random.uniform(0, 0.0001),
+    }
+    return random_params
 
 # ==============================
 # Fitness-Plot-Funktion

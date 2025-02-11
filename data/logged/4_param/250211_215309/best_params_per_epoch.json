@@ -1,0 +1,102 @@
+[
+    {
+        "generation": 1,
+        "fitness": -2073252.8928747885,
+        "params": {
+            "tau_wand": 0.0629717928616008,
+            "tau_speicher": 0.42946551457627213,
+            "tau_raum": 7.751232254927658,
+            "fensterfaktor": 9.568542170231868e-05
+        }
+    },
+    {
+        "generation": 2,
+        "fitness": -2073252.8928747885,
+        "params": {
+            "tau_wand": 0.0629717928616008,
+            "tau_speicher": 0.42946551457627213,
+            "tau_raum": 7.751232254927658,
+            "fensterfaktor": 9.568542170231868e-05
+        }
+    },
+    {
+        "generation": 3,
+        "fitness": -2073252.8928747885,
+        "params": {
+            "tau_wand": 0.0629717928616008,
+            "tau_speicher": 0.42946551457627213,
+            "tau_raum": 7.751232254927658,
+            "fensterfaktor": 9.568542170231868e-05
+        }
+    },
+    {
+        "generation": 4,
+        "fitness": -2073252.8928747885,
+        "params": {
+            "tau_wand": 0.0629717928616008,
+            "tau_speicher": 0.42946551457627213,
+            "tau_raum": 7.751232254927658,
+            "fensterfaktor": 9.568542170231868e-05
+        }
+    },
+    {
+        "generation": 5,
+        "fitness": -2073252.8928747885,
+        "params": {
+            "tau_wand": 0.0629717928616008,
+            "tau_speicher": 0.42946551457627213,
+            "tau_raum": 7.751232254927658,
+            "fensterfaktor": 9.568542170231868e-05
+        }
+    },
+    {
+        "generation": 6,
+        "fitness": -2072894.3881921528,
+        "params": {
+            "tau_wand": 0.05964058111387382,
+            "tau_speicher": 0.4269701957767512,
+            "tau_raum": 8.596929215551969,
+            "fensterfaktor": 8.310248948906441e-05
+        }
+    },
+    {
+        "generation": 7,
+        "fitness": -2072894.3881921528,
+        "params": {
+            "tau_wand": 0.05964058111387382,
+            "tau_speicher": 0.4269701957767512,
+            "tau_raum": 8.596929215551969,
+            "fensterfaktor": 8.310248948906441e-05
+        }
+    },
+    {
+        "generation": 8,
+        "fitness": -2071554.495959487,
+        "params": {
+            "tau_wand": 0.05953334024634001,
+            "tau_speicher": 0.42834713439450917,
+            "tau_raum": 8.5310762395642,
+            "fensterfaktor": 8.874591808222932e-05
+        }
+    },
+    {
+        "generation": 9,
+        "fitness": -2071554.495959487,
+        "params": {
+            "tau_wand": 0.05953334024634001,
+            "tau_speicher": 0.42834713439450917,
+            "tau_raum": 8.5310762395642,
+            "fensterfaktor": 8.874591808222932e-05
+        }
+    },
+    {
+        "generation": 10,
+        "fitness": -2070250.0227013133,
+        "params": {
+            "tau_wand": 0.05591635195012361,
+            "tau_speicher": 0.4276586650856302,
+            "tau_raum": 9.003411868531641,
+            "fensterfaktor": 8.592420378564686e-05
+        }
+    }
+]
