@@ -54,7 +54,7 @@ class RaumModell:
             y_new[i] = (1 - alpha) * y[i] + alpha * (u if i == 0 else y_new[i - 1])
         return y_new
 
-    def orthogonalität(azimuth, elevation, surface_azimuth, surface_tilt):
+    def orthogonalität(self, azimuth, elevation, surface_azimuth, surface_tilt):
         """
         Berechnet die projizierte Fläche einer Wand für eine Liste von Sonnenpositionen.
 
@@ -117,6 +117,7 @@ class RaumModell:
     def run_model(self, dataset):
 
         sunOrtho = self.orthogonalität(dataset["azimuth"], dataset["elevation"], 180, 0)
+        print(dataset["tmpAmbient"])
 
         return  self.raumtemperatur_model(
                     tmp_0          = 21.5357487923,

@@ -11,7 +11,9 @@ class DataModuleStatic:
         self.soll_keys = soll_keys if soll_keys else {
             'timestamp'     : 'timestamp',
             'SunPow'        : 'sunPower',
-            'tmpAmbient1'   : 'tmpAmbient',
+            'tmpAmbient'    : 'tmpAmbient',
+            'tmpAmbient1'   : 'tmpAmbient1',
+            'tmpAmbient2'   : 'tmpAmbient2',
             'presence'      : 'presence',
             'hd'            : 'hd',
             'tmpAmbientFc'  : 'tmpAmbientFc',
