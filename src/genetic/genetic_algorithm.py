@@ -12,9 +12,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 30
-GENERATIONS = 10
-MUTATION_RATE = 0.3
+POPULATION_SIZE = 50
+GENERATIONS = 100
+MUTATION_RATE = 0.2
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -131,8 +131,8 @@ def genetic_algorithm():
     DataModule = DataModuleStatic()
     DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
     start, end = DataModule.get_time_range()
-    DataModule.get_timespan(start, end)
-    dataset = DataModule.df
+    endtime = DataModule.df["timestamp"]
+    dataset = DataModule.get_timespan(start, endtime[3000])
     real_temp = dataset["tmpRoom"]
 
     # Log-Ordner erstellen
@@ -215,8 +215,8 @@ def random_individual():
     random_params = {
         "tau_wand": np.random.uniform(0, 0.1),
         "tau_speicher": np.random.uniform(0, 1),
-        "tau_raum": np.random.uniform(0, 8),
-        "fensterfaktor": np.random.uniform(0, 0.0001),
+        "tau_raum": np.random.uniform(0, 10),
+        "fensterfaktor": np.random.uniform(0, 0.0005),
     }
     return random_params
 
