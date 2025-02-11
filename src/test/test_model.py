@@ -7,7 +7,7 @@ from model.room_model import RaumModell
 
 DataModule = DataModuleStatic()
 
-DataModule.load_csv(r"data\training\240331_Dataset.csv")
+DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
 
 # Zeitbereich abrufen
 #start, end = DataModule.get_time_range()
@@ -16,10 +16,6 @@ DataModule.load_csv(r"data\training\240331_Dataset.csv")
 
 Raum = RaumModell(dt = 1)
 
-tmp = Raum.raumtemperatur_model(tmp_0          = 21.5357487923,
-                                tmp_aussen     = DataModule.df["tmpAmbient1"],
-                                sonnenleistung = DataModule.df["SunPow"],
-                                orthogonalität = DataModule.df["sunOrtho"]
-                                )
+tmp = Raum.run_model(DataModule.df)
 
 print(tmp)
