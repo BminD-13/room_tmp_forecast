@@ -1,15 +1,14 @@
 # model
-import numpy as np
 import csv
 
 class RaumModell:
-    def __init__(self, param_file=None, **kwargs):
+    def __init__(self, dt, param_file=None, **kwargs):
         self.default_params = {
             "tau_wand": 1000, "tau_speicher": 2000, "tau_raum": 500,
             "n_wand": 2, "n_speicher": 1, "n_raum": 3,
-            "fensterflaeche": 2,
-            "absorption_wand": 0.5, "absorption_speicher": 0.6, "absorption_raum": 0.4
         }
+        
+        self.dt = dt
         
         if param_file:
             self.load_parameters(param_file)
@@ -35,39 +34,58 @@ class RaumModell:
             if key in self.default_params:
                 setattr(self, key, value)
     
-    def ptn(self, y_prev, u, dt, tau, n=1):
-        if len(y_prev) < n:
-            y_prev = [y_prev[0]] * n  
-        alpha = dt / (tau + dt)  
-        y_new = y_prev.copy()
+    def ptn(self, y, u, tau, n=1):
+        """
+        Simuliert eine PTn-Strecke (n-stufiges Verzögerungsglied).
+        
+        Parameter:
+        y:   Liste mit vorherigen Zuständen der PTn-Strecke.
+        u:   Eingangsgröße (z. B. Temperatur, Steuergröße).
+        dt:  Zeitschritt der Simulation.
+        tau: Zeitkonstante des Systems (je größer tau, desto träger die Reaktion).
+        n:   Ordnung der PTn-Strecke (also wie viele hintereinandergeschaltete PT1-Glieder).
+        """
+        if len(y) < n:
+            y = [y[0]] * n  
+        alpha = self.dt / (tau + self.dt)  
+        y_new = y.copy()
         for i in range(n):
-            y_new[i] = (1 - alpha) * y_prev[i] + alpha * (u if i == 0 else y_new[i - 1])
+            y_new[i] = (1 - alpha) * y[i] + alpha * (u if i == 0 else y_new[i - 1])
         return y_new
+
+    def orthogonalität(self, azimuth, elevation, normale):
+        """
+        Berechnet die pojizierte Fläche einer Wand,
+        welche von der Sonne bestrahlt wird
+
+        Parameter:
+        azimuth:   Himmelsrichtung der Sonne
+        elevation: Winkel der Sonne vom Boden gemessen
+        normale:   Flächennormale der betrachteten Oberfläche
+        """
+        return azimuth, elevation
     
-    def sonnenstrahlung(self, sonnenleistung, einfallswinkel):
-        return sonnenleistung * einfallswinkel * self.fensterflaeche
+    def sonnenstrahlung(self, tmp, sonnenleistung, orthogonalität):
+        return tmp + sonnenleistung * orthogonalität * self.fensterflaeche
     
-    def raumtemperatur_model(self, t_aussen, sonnenleistung, einfallswinkel, dt=60):
-        t_wand = [t_aussen[0]] * self.n_wand
-        t_speicher = [t_aussen[0]] * self.n_speicher
-        t_raum = [t_aussen[0]] * self.n_raum
+    def raumtemperatur_model(self, tmp_aussen, sonnenleistung, einfallswinkel):
+        tmp_wand =  	[tmp_aussen[0]] * self.n_wand
+        tmp_speicher =  [tmp_aussen[0]] * self.n_speicher
+        tmp_raum =      [tmp_aussen[0]] * self.n_raum
         
         ergebnisse = []
-        for i in range(len(t_aussen)):
-            p_sonne_wand = self.sonnenstrahlung(sonnenleistung[i], einfallswinkel[i]) * self.absorption_wand
-            p_sonne_speicher = self.sonnenstrahlung(sonnenleistung[i], einfallswinkel[i]) * self.absorption_speicher
-            p_sonne_raum = self.sonnenstrahlung(sonnenleistung[i], einfallswinkel[i]) * self.absorption_raum
+        for i in range(len(tmp_aussen)):
+
+            tmp_wand = self.ptn(tmp_wand, tmp_aussen[i], self.tau_wand, self.n_wand)
+            tmp_wand = self.sonnenstrahlung(tmp_wand, sonnenleistung[i], einfallswinkel[i])
             
-            t_wand = self.ptn(t_wand, t_aussen[i], dt, self.tau_wand, self.n_wand)
-            t_wand = self.ptn(t_wand, p_sonne_wand, dt, self.tau_wand, self.n_wand)
+            tmp_speicher = self.ptn(tmp_speicher, tmp_raum[-1], self.tau_speicher, self.n_speicher)
+            tmp_speicher = self.sonnenstrahlung(tmp_speicher, sonnenleistung[i], einfallswinkel[i])
             
-            t_speicher = self.ptn(t_speicher, t_raum[-1], dt, self.tau_speicher, self.n_speicher)
-            t_speicher = self.ptn(t_speicher, p_sonne_speicher, dt, self.tau_speicher, self.n_speicher)
+            tmp_raum = self.ptn(tmp_raum, tmp_speicher[-1], self.tau_raum, self.n_raum)
+            tmp_raum = self.ptn(tmp_raum, tmp_wand[-1], self.tau_raum, self.n_raum)
+            tmp_raum = self.sonnenstrahlung(tmp_raum, sonnenleistung[i], einfallswinkel[i])
             
-            t_raum = self.ptn(t_raum, t_speicher[-1], dt, self.tau_raum, self.n_raum)
-            t_raum = self.ptn(t_raum, t_wand[-1], dt, self.tau_raum, self.n_raum)
-            t_raum = self.ptn(t_raum, p_sonne_raum, dt, self.tau_raum, 1)
-            
-            ergebnisse.append(t_raum[-1])
+            ergebnisse.append(tmp_raum[-1])
         
         return ergebnisse
