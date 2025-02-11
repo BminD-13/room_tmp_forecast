@@ -6,7 +6,7 @@ class RaumModell:
     def __init__(self, dt, param_file=None, **kwargs):
         self.default_params = {
             "tau_wand": 1, "tau_speicher": 1, "tau_raum": 1,
-            "n_wand": 2, "n_speicher": 1, "n_raum": 3,
+            "n_wand": 1, "n_speicher": 3, "n_raum_storage": 3, "n_raum_wand": 3,
             "fensterfaktor": 1
         }
 
@@ -96,7 +96,7 @@ class RaumModell:
     def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität):
         tmp_wall =  	[tmp_aussen[0]] * self.n_wand
         tmp_storage =  [tmp_aussen[0]] * self.n_speicher
-        tmp_room =      [tmp_0] * self.n_raum
+        tmp_room =      [tmp_0] * self.n_raum_storage
         
         ergebnisse = []
         for i in range(len(tmp_aussen)):
@@ -107,8 +107,8 @@ class RaumModell:
             tmp_storage = self.ptn(tmp_storage, tmp_room[-1], self.tau_speicher, self.n_speicher)
             tmp_storage = self.sonnenstrahlung(tmp_storage, sonnenleistung[i], orthogonalität[i])
             
-            tmp_room = self.ptn(tmp_room, tmp_storage[-1], self.tau_raum, self.n_raum)
-            tmp_room = self.ptn(tmp_room, tmp_wall[-1], self.tau_raum, self.n_raum)
+            tmp_room = self.ptn(tmp_room, tmp_storage[-1], self.tau_raum, self.n_raum_storage)
+            tmp_room = self.ptn(tmp_room, tmp_wall[-1], self.tau_raum, self.n_raum_wand)
             tmp_room = self.sonnenstrahlung(tmp_room, sonnenleistung[i], orthogonalität[i])
             
             ergebnisse.append(tmp_room[-1])
