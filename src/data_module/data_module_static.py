@@ -9,22 +9,22 @@ class DataModuleStatic:
         
         # Soll-Keys für die Zuordnung (falls keine angegeben werden, Standardwerte)
         self.soll_keys = soll_keys if soll_keys else {
-            'timestamp': 'timestamp',  # Beispielzuordnung
-            'SunPow': 'SunPow',
-            'tmpAmbient': 'tmpAmbient',
-            'tmpAmbient1': 'tmpAmbient1',
-            'tmpAmbient2': 'tmpAmbient2',
-            'presence': 'presence',
-            'hd': 'hd',
-            'tmpAmbientFc': 'tmpAmbientFc',
-            'clouds': 'clouds',
-            'sunOrtho': 'sunOrtho',
-            'xHeating': 'xHeating',
-            'tmpRoom': 'tmpRoom',
-            'tmpInventory': 'tmpInventory',
-            'tmpDoorRoom': 'tmpDoorRoom',
-            'windSpeed': 'windSpeed',
-            'visibility': 'visibility'
+            'timestamp'     : 'timestamp',
+            'SunPow'        : 'sunPower',
+            'tmpAmbient1'   : 'tmpAmbient',
+            'presence'      : 'presence',
+            'hd'            : 'hd',
+            'tmpAmbientFc'  : 'tmpAmbientFc',
+            'clouds'        : 'clouds',
+            'sunOrtho'      : 'sunOrtho',
+            'xHeating'      : 'xHeating',
+            'tmpRoom'       : 'tmpRoom',
+            'tmpInventory'  : 'tmpInventory',
+            'tmpDoorRoom'   : 'tmpDoorRoom',
+            'windSpeed'     : 'windSpeed',
+            'visibility'    : 'visibility',
+            'azimuth'       : 'azimuth',
+            'elevation'     : 'elevation',
         }
 
     def load_dataframe(self, df: pd.DataFrame):
