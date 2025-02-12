@@ -95,7 +95,7 @@ class RaumModell:
     
     def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität):
         tmp_wall =  	[tmp_aussen[0]] * self.n_wand
-        tmp_storage =  [tmp_aussen[0]] * self.n_speicher
+        tmp_storage =  [tmp_0] * self.n_speicher
         tmp_room =      [tmp_0] * self.n_raum_storage
         
         ergebnisse = []
