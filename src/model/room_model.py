@@ -5,9 +5,9 @@ import csv
 class RaumModell:
     def __init__(self, dt, param_file=None, **kwargs):
         self.default_params = {
-            "tau_wand": 1, "tau_speicher": 1, "tau_raum": 1,
+            "tau_wall_ambient": 1, "tau_storage_room": 1, "tau_raum_speicher": 1, "tau_raum_wand": 1,
+            "sun_wall": 1, "sun_storage": 1, "sun_room": 1,
             "n_wand": 1, "n_speicher": 3, "n_raum_storage": 3, "n_raum_wand": 3,
-            "fensterfaktor": 1
         }
 
         self.dt = dt
@@ -90,8 +90,8 @@ class RaumModell:
 
 
     
-    def sonnenstrahlung(self, tmp, sonnenleistung, orthogonalität):
-        return tmp + sonnenleistung * orthogonalität  * self.fensterfaktor
+    def sonnenstrahlung(self, tmp, sonnenleistung, orthogonalität, param):
+        return tmp + sonnenleistung * orthogonalität  * param
     
     def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität):
         tmp_wall =  	[tmp_aussen[0]] * self.n_wand
@@ -101,15 +101,15 @@ class RaumModell:
         ergebnisse = []
         for i in range(len(tmp_aussen)):
 
-            tmp_wall = self.ptn(tmp_wall, tmp_aussen[i], self.tau_wand, self.n_wand)
-            tmp_wall = self.sonnenstrahlung(tmp_wall, sonnenleistung[i], orthogonalität[i])
+            tmp_wall = self.ptn(tmp_wall, tmp_aussen[i], self.tau_wall_ambient, self.n_wand)
+            tmp_wall = self.sonnenstrahlung(tmp_wall, sonnenleistung[i], orthogonalität[i], self.sun_wall)
             
-            tmp_storage = self.ptn(tmp_storage, tmp_room[-1], self.tau_speicher, self.n_speicher)
-            tmp_storage = self.sonnenstrahlung(tmp_storage, sonnenleistung[i], orthogonalität[i])
+            tmp_storage = self.ptn(tmp_storage, tmp_room[-1], self.tau_storage_room, self.n_speicher)
+            tmp_storage = self.sonnenstrahlung(tmp_storage, sonnenleistung[i], orthogonalität[i], self.sun_storage)
             
-            tmp_room = self.ptn(tmp_room, tmp_storage[-1], self.tau_raum, self.n_raum_storage)
-            tmp_room = self.ptn(tmp_room, tmp_wall[-1], self.tau_raum, self.n_raum_wand)
-            tmp_room = self.sonnenstrahlung(tmp_room, sonnenleistung[i], orthogonalität[i])
+            tmp_room = self.ptn(tmp_room, tmp_storage[-1], self.tau_raum_speicher, self.n_raum_storage)
+            tmp_room = self.ptn(tmp_room, tmp_wall[-1], self.tau_raum_wand, self.n_raum_wand)
+            tmp_room = self.sonnenstrahlung(tmp_room, sonnenleistung[i], orthogonalität[i], self.sun_room)
             
             ergebnisse.append(tmp_room[-1])
         

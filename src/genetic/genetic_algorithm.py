@@ -13,8 +13,8 @@ from model.room_model import RaumModell
 # Parameter für den GA
 # ==============================
 POPULATION_SIZE = 30
-GENERATIONS = 50
-MUTATION_RATE = 0.2
+GENERATIONS = 100
+MUTATION_RATE = 0.3
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -22,9 +22,27 @@ MUTATION_RATE = 0.2
 def create_log_directory():
     """Erstellt ein neues Log-Verzeichnis mit Zeitstempel."""
     timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_dir = os.path.join("./data/logged/short_dataset", timestamp)
+    #log_dir = os.path.join("./data/logged/genetic", timestamp)
+    log_dir = os.path.join("./data/logged/test", timestamp)
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
+
+# ==============================
+# Zufälliges Individuum generieren
+# ==============================
+def random_individual():
+    """Generiert ein zufälliges Individuum."""
+    individual = {
+        "tau_raum_wand":    np.random.uniform(0, 1),  #
+        "tau_raum_speicher":np.random.uniform(0, 20),    
+        "tau_storage_room": np.random.uniform(0, 10),  #
+        "tau_wall_ambient": np.random.uniform(0, 10),
+        "sun_wall":         np.random.uniform(0, 1),  #
+        "sun_room":         np.random.uniform(0, 5),  #
+        "sun_storage":      np.random.uniform(0, 5),  # 
+    }
+    return individual
+
 
 # ==============================
 # Initialisierung der Population
@@ -33,12 +51,7 @@ def initialize_population():
     """Erstellt die initiale Population mit zufälligen Parametern."""
     population = []
     for _ in range(POPULATION_SIZE):
-        individual = {
-            "tau_wand": np.random.uniform(0, 0.1),          # 0.003634
-            "tau_speicher": np.random.uniform(0, 1),        # 0.559296
-            "tau_raum": np.random.uniform(0, 8),            # 0.000900
-            "fensterfaktor": np.random.uniform(0, 0.0001),  # 
-        }
+        individual = random_individual()
         population.append(individual)
     return population
 
@@ -206,19 +219,6 @@ def selection_for_best(population, scores, num_parents):
     selected_parents = [indiv for indiv, _ in sorted_population[:num_parents]]
     
     return selected_parents
-
-# ==============================
-# Zufälliges Individuum generieren
-# ==============================
-def random_individual():
-    """Generiert ein zufälliges Individuum."""
-    random_params = {
-        "tau_wand": np.random.uniform(0, 0.1),
-        "tau_speicher": np.random.uniform(0, 1),
-        "tau_raum": np.random.uniform(0, 10),
-        "fensterfaktor": np.random.uniform(0, 0.0005),
-    }
-    return random_params
 
 # ==============================
 # Fitness-Plot-Funktion
