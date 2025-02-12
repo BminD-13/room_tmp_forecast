@@ -45,13 +45,29 @@ def random_individual():
 
 
 # ==============================
+# Exponentiell Individuum generieren
+# ==============================
+def random_exp_individual():
+    """Generiert ein zufälliges Individuum."""
+    individual = {
+        "tau_raum_wand":    np.random.exponential(0.0028),# 0.0085
+        "tau_raum_speicher":np.random.exponential(0.12),  # 0.7347
+        "tau_storage_room": np.random.exponential(0.21), # 0.0653
+        "tau_wall_ambient": np.random.exponential(0.10),  # 
+        "sun_wall":         np.random.exponential(0.020),  #
+        "sun_room":         np.random.exponential(0.047),  #
+        "sun_storage":      np.random.exponential(0.11),    # 
+    }
+    return individual
+
+# ==============================
 # Initialisierung der Population
 # ==============================
 def initialize_population():
     """Erstellt die initiale Population mit zufälligen Parametern."""
     population = []
     for _ in range(POPULATION_SIZE):
-        individual = random_individual()
+        individual = random_exp_individual()
         population.append(individual)
     return population
 
@@ -167,6 +183,7 @@ def genetic_algorithm():
         fitness_history.append(best_fitness)
 
         print(f"Generation {generation+1}: Beste Fitness = {best_fitness:.4f}")
+        #print(f"Parameter: {best_individual}")
 
         # Auswahl der besten 8 Individuen (mit hoher Fitness)
         selected_parents = selection_for_best(population, scores, num_parents=8)
