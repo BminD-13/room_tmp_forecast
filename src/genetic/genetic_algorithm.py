@@ -12,8 +12,8 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 30
-GENERATIONS = 100
+POPULATION_SIZE = 20
+GENERATIONS = 20
 MUTATION_RATE = 0.3
 
 # ==============================

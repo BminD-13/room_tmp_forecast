@@ -120,7 +120,7 @@ class RaumModell:
         sunOrtho = self.orthogonalität(dataset["azimuth"], dataset["elevation"], 180, 0)
 
         return  self.raumtemperatur_model(
-                    tmp_0          = 41.5357487923,
+                    tmp_0          = 21.5357487923,
                     tmp_aussen     = dataset["tmpAmbient"],
                     sonnenleistung = dataset["sunPower"],
                     orthogonalität = sunOrtho
