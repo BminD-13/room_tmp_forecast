@@ -8,6 +8,10 @@ class RaumModell:
             "tau_wall_ambient": 1, "tau_storage_room": 1, "tau_raum_speicher": 1, "tau_raum_wand": 1,
             "sun_wall": 1, "sun_storage": 1, "sun_room": 1,
             "n_wand": 1, "n_speicher": 3, "n_raum_storage": 3, "n_raum_wand": 3,
+            "tau_floor_room": 1, "n_floor_room": 3,
+            "tau_floor_ground": 1, "n_floor_ground": 3,
+            "tau_room_floor": 1, "n_room_floor": 3,
+            "tau_floor_heating": 1, "n_floor_heating": 3
         }
 
         self.dt = dt
@@ -93,10 +97,11 @@ class RaumModell:
     def sonnenstrahlung(self, tmp, sonnenleistung, orthogonalität, param):
         return tmp + sonnenleistung * orthogonalität  * param
     
-    def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität):
+    def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
         tmp_wall =  	[tmp_aussen[0]] * self.n_wand
-        tmp_storage =  [tmp_0] * self.n_speicher
+        tmp_storage =   [tmp_0] * self.n_speicher
         tmp_room =      [tmp_0] * self.n_raum_storage
+        tmp_floor =     [(tmp_0 + 10)  / 2] * self.n_room_floor
         
         ergebnisse = []
         for i in range(len(tmp_aussen)):
@@ -107,7 +112,12 @@ class RaumModell:
             tmp_storage = self.ptn(tmp_storage, tmp_room[-1], self.tau_storage_room, self.n_speicher)
             tmp_storage = self.sonnenstrahlung(tmp_storage, sonnenleistung[i], orthogonalität[i], self.sun_storage)
             
+            tmp_floor = self.ptn(tmp_floor, 7 + 23 * heating[i], self.tau_floor_heating, self.n_floor_heating)
+            tmp_floor = self.ptn(tmp_floor, tmp_room[-1], self.tau_floor_room, self.n_floor_room)
+            tmp_floor = self.ptn(tmp_floor, 7           , self.tau_floor_ground, self.n_floor_ground)
+
             tmp_room = self.ptn(tmp_room, tmp_storage[-1], self.tau_raum_speicher, self.n_raum_storage)
+            tmp_room = self.ptn(tmp_room, tmp_floor[-1], self.tau_room_floor, self.n_room_floor)
             tmp_room = self.ptn(tmp_room, tmp_wall[-1], self.tau_raum_wand, self.n_raum_wand)
             tmp_room = self.sonnenstrahlung(tmp_room, sonnenleistung[i], orthogonalität[i], self.sun_room)
             
@@ -123,5 +133,6 @@ class RaumModell:
                     tmp_0          = 21.5357487923,
                     tmp_aussen     = dataset["tmpAmbient"],
                     sonnenleistung = dataset["sunPower"],
+                    heating        = dataset["xHeating"],
                     orthogonalität = sunOrtho
                 )
