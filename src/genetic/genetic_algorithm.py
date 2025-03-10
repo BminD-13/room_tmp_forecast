@@ -50,13 +50,17 @@ def random_individual():
 def random_exp_individual():
     """Generiert ein zufälliges Individuum."""
     individual = {
-        "tau_raum_wand":    np.random.exponential(0.0028),# 0.0085
-        "tau_raum_speicher":np.random.exponential(0.12),  # 0.7347
-        "tau_storage_room": np.random.exponential(0.21), # 0.0653
-        "tau_wall_ambient": np.random.exponential(0.10),  # 
-        "sun_wall":         np.random.exponential(0.020),  #
-        "sun_room":         np.random.exponential(0.047),  #
-        "sun_storage":      np.random.exponential(0.11),    # 
+        "tau_room_floor":    np.random.exponential(1),
+        "tau_floor_room":    np.random.exponential(1),
+        "tau_floor_heating": np.random.exponential(1),
+        "tau_floor_ground":  np.random.exponential(1),
+        "tau_raum_wand":     np.random.exponential(1),
+        "tau_raum_speicher": np.random.exponential(1),
+        "tau_storage_room":  np.random.exponential(1),
+        "tau_wall_ambient":  np.random.exponential(1),
+        "sun_wall":          np.random.exponential(1),
+        "sun_room":          np.random.exponential(1),
+        "sun_storage":       np.random.exponential(1),
     }
     return individual
 
