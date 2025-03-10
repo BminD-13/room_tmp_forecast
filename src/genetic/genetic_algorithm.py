@@ -12,9 +12,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 20
-GENERATIONS = 20
-MUTATION_RATE = 0.3
+POPULATION_SIZE = 100
+GENERATIONS = 100
+MUTATION_RATE = 0.2
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -43,11 +43,17 @@ def random_individual():
     }
     return individual
 
+default_params = {'tau_room_floor': 0.02513248737323981, 'tau_floor_room': 0.04937748889014964, 
+                  'tau_floor_heating': 0.7281269162600094, 'tau_floor_ground': 3.113156920811843, 
+                  'tau_raum_wand': 6.520012528286584, 'tau_raum_speicher': 0.06275254242967607, 
+                  'tau_storage_room': 0.21872512703294897, 'tau_wall_ambient': 0.10414680378309432, 
+                  'sun_wall': 0.037445931642217406, 'sun_room': 0.002633703169509679, 
+                  'sun_storage': 0.00153436656542661}
 
 # ==============================
 # Exponentiell Individuum generieren
 # ==============================
-def random_exp_individual():
+def random_exp_individual(params=default_params):
     """Generiert ein zufälliges Individuum."""
     individual = {
         "tau_room_floor":    np.random.exponential(1),
@@ -62,6 +68,9 @@ def random_exp_individual():
         "sun_room":          np.random.exponential(1),
         "sun_storage":       np.random.exponential(1),
     }
+
+    for key, item in params.items():
+        individual[key] = np.random.exponential(default_params[key])
     return individual
 
 # ==============================
@@ -71,7 +80,7 @@ def initialize_population():
     """Erstellt die initiale Population mit zufälligen Parametern."""
     population = []
     for _ in range(POPULATION_SIZE):
-        individual = random_exp_individual()
+        individual = random_exp_individual(default_params)
         population.append(individual)
     return population
 
@@ -190,18 +199,19 @@ def genetic_algorithm():
         #print(f"Parameter: {best_individual}")
 
         # Auswahl der besten 8 Individuen (mit hoher Fitness)
-        selected_parents = selection_for_best(population, scores, num_parents=8)
+        selected_parents = selection_for_best(population, scores, num_parents=int(POPULATION_SIZE * 0.2))
 
         # Erstellen von Nachkommen durch Crossover und Mutation (6 Individuen)
         new_children = []
-        while len(new_children) < 6:
+        while len(new_children) < POPULATION_SIZE * 0.4:
             parent1, parent2 = random.sample(selected_parents, 2)
             child1 = mutate(crossover(parent1, parent2))
             child2 = mutate(crossover(parent2, parent1))
             new_children.extend([child1, child2])
-
+        
         # Erstellen von zufälligen Individuen (6 Individuen)
-        random_individuals = [random_individual() for _ in range(6)]
+        n_randoms = int(POPULATION_SIZE * (1 -0.4 -0.2))
+        random_individuals = [random_exp_individual(best_individual) for _ in range(n_randoms)]
 
         # Neue Population generieren (beste 8 Individuen + 6 durch Crossover + 6 zufällige)
         population = selected_parents + new_children + random_individuals
