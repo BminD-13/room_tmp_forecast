@@ -12,9 +12,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 100
-GENERATIONS = 100
-MUTATION_RATE = 0.2
+POPULATION_SIZE = 200
+GENERATIONS = 10
+MUTATION_RATE = 0.1
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -48,7 +48,28 @@ default_params = {'tau_room_floor': 0.02513248737323981, 'tau_floor_room': 0.049
                   'tau_raum_wand': 6.520012528286584, 'tau_raum_speicher': 0.06275254242967607, 
                   'tau_storage_room': 0.21872512703294897, 'tau_wall_ambient': 0.10414680378309432, 
                   'sun_wall': 0.037445931642217406, 'sun_room': 0.002633703169509679, 
-                  'sun_storage': 0.00153436656542661}
+                  'sun_storage': 0.00153436656542661} # 330 000
+
+default_params = {'tau_room_floor': 0.015309839692802476, 'tau_floor_room': 0.0018944284547845166, 
+                  'tau_floor_heating': 0.5922735203417682, 'tau_floor_ground': 9.300029500125033, 
+                  'tau_raum_wand': 12.375921358328819, 'tau_raum_speicher': 0.07923776081442808, 
+                  'tau_storage_room': 0.19960818425776491, 'tau_wall_ambient': 0.03349907848650857, 
+                  'sun_wall': 0.0013201195326578363, 'sun_room': 0.00019125279733812794, 
+                  'sun_storage': 0.00136583623628363} # 202 000
+
+default_params = {'tau_room_floor': 0.010013061060911441, 'tau_floor_room': 0.00028631718928983594, 
+                  'tau_floor_heating': 0.07328780940120351, 'tau_floor_ground': 18.778757416489885, 
+                  'tau_raum_wand': 24.149490601629882, 'tau_raum_speicher': 0.08466205561798831, 
+                  'tau_storage_room': 0.026011431080780925, 'tau_wall_ambient': 0.005415140921971545, 
+                  'sun_wall': 1.1092587897652006e-05, 'sun_room': 4.7245024945086645e-05, 
+                  'sun_storage': 0.000938758157292691} # 23 000
+
+default_params = {'tau_room_floor': 0.0029355538646993425, 'tau_floor_room': 0.00013207434621805052, 
+                  'tau_floor_heating': 0.12745348705256793, 'tau_floor_ground': 42.154932640065084, 
+                  'tau_raum_wand': 34.901825218773524, 'tau_raum_speicher': 0.04364719252160795, 
+                  'tau_storage_room': 0.04988245472320489, 'tau_wall_ambient': 0.004690604835609079, 
+                  'sun_wall': 8.728507322081986e-06, 'sun_room': 1.0913158352466944e-05, 
+                  'sun_storage': 0.000797638707896998} # 3 000
 
 # ==============================
 # Exponentiell Individuum generieren
@@ -210,8 +231,9 @@ def genetic_algorithm():
             new_children.extend([child1, child2])
         
         # Erstellen von zufälligen Individuen (6 Individuen)
-        n_randoms = int(POPULATION_SIZE * (1 -0.4 -0.2))
-        random_individuals = [random_exp_individual(best_individual) for _ in range(n_randoms)]
+        n_randoms = int(POPULATION_SIZE * (1 -0.6))
+        print(n_randoms)
+        random_individuals = [random_exp_individual(population[i]) for i in range(n_randoms)]
 
         # Neue Population generieren (beste 8 Individuen + 6 durch Crossover + 6 zufällige)
         population = selected_parents + new_children + random_individuals
