@@ -12,8 +12,8 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 200
-GENERATIONS = 10
+POPULATION_SIZE = 50
+GENERATIONS = 100
 MUTATION_RATE = 0.1
 
 # ==============================
@@ -43,33 +43,19 @@ def random_individual():
     }
     return individual
 
-default_params = {'tau_room_floor': 0.02513248737323981, 'tau_floor_room': 0.04937748889014964, 
-                  'tau_floor_heating': 0.7281269162600094, 'tau_floor_ground': 3.113156920811843, 
-                  'tau_raum_wand': 6.520012528286584, 'tau_raum_speicher': 0.06275254242967607, 
-                  'tau_storage_room': 0.21872512703294897, 'tau_wall_ambient': 0.10414680378309432, 
-                  'sun_wall': 0.037445931642217406, 'sun_room': 0.002633703169509679, 
-                  'sun_storage': 0.00153436656542661} # 330 000
+default_params = {'tau_room_floor': 0.0007308456573060104, 'tau_floor_room': 8.537692159867161e-05, 
+                  'tau_floor_heating': 0.34942355933431474, 'tau_floor_ground': 67.50819953071793, 
+                  'tau_raum_wand': 74.49409156302056, 'tau_raum_speicher': 0.04296779378788926, 
+                  'tau_storage_room': 0.06394439372638663, 'tau_wall_ambient': 0.004546326426264305, 
+                  'sun_wall': 5.961600783791798e-06, 'sun_room': 3.584582746166859e-06, 
+                  'sun_storage': 0.0005131202216431431}
 
-default_params = {'tau_room_floor': 0.015309839692802476, 'tau_floor_room': 0.0018944284547845166, 
-                  'tau_floor_heating': 0.5922735203417682, 'tau_floor_ground': 9.300029500125033, 
-                  'tau_raum_wand': 12.375921358328819, 'tau_raum_speicher': 0.07923776081442808, 
-                  'tau_storage_room': 0.19960818425776491, 'tau_wall_ambient': 0.03349907848650857, 
-                  'sun_wall': 0.0013201195326578363, 'sun_room': 0.00019125279733812794, 
-                  'sun_storage': 0.00136583623628363} # 202 000
-
-default_params = {'tau_room_floor': 0.010013061060911441, 'tau_floor_room': 0.00028631718928983594, 
-                  'tau_floor_heating': 0.07328780940120351, 'tau_floor_ground': 18.778757416489885, 
-                  'tau_raum_wand': 24.149490601629882, 'tau_raum_speicher': 0.08466205561798831, 
-                  'tau_storage_room': 0.026011431080780925, 'tau_wall_ambient': 0.005415140921971545, 
-                  'sun_wall': 1.1092587897652006e-05, 'sun_room': 4.7245024945086645e-05, 
-                  'sun_storage': 0.000938758157292691} # 23 000
-
-default_params = {'tau_room_floor': 0.0029355538646993425, 'tau_floor_room': 0.00013207434621805052, 
-                  'tau_floor_heating': 0.12745348705256793, 'tau_floor_ground': 42.154932640065084, 
-                  'tau_raum_wand': 34.901825218773524, 'tau_raum_speicher': 0.04364719252160795, 
-                  'tau_storage_room': 0.04988245472320489, 'tau_wall_ambient': 0.004690604835609079, 
-                  'sun_wall': 8.728507322081986e-06, 'sun_room': 1.0913158352466944e-05, 
-                  'sun_storage': 0.000797638707896998} # 3 000
+default_params = {'tau_room_floor': 0.000536650298676011, 'tau_floor_room': 8.336555175596821e-05, 
+                  'tau_floor_heating': 0.1240000373349645, 'tau_floor_ground': 117.65571736541352, 
+                  'tau_raum_wand': 74.5928848576211, 'tau_raum_speicher': 0.02850856859463459, 
+                  'tau_storage_room': 0.22702189947213852, 'tau_wall_ambient': 0.0019096825039316683, 
+                  'sun_wall': 3.1275351181832673e-06, 'sun_room': 5.49512343146589e-06, 
+                  'sun_storage': 0.00016487848492935202}
 
 # ==============================
 # Exponentiell Individuum generieren
@@ -195,7 +181,7 @@ def genetic_algorithm():
     DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
     start, end = DataModule.get_time_range()
     endtime = DataModule.df["timestamp"]
-    dataset = DataModule.get_timespan(start, endtime[3000])
+    dataset = DataModule.get_timespan(start, endtime[9000])
     real_temp = dataset["tmpRoom"]
 
     # Log-Ordner erstellen
@@ -219,7 +205,7 @@ def genetic_algorithm():
         print(f"Generation {generation+1}: Beste Fitness = {best_fitness:.4f}")
         #print(f"Parameter: {best_individual}")
 
-        # Auswahl der besten 8 Individuen (mit hoher Fitness)
+        # Auswahl der besten Individuen (mit hoher Fitness)
         selected_parents = selection_for_best(population, scores, num_parents=int(POPULATION_SIZE * 0.2))
 
         # Erstellen von Nachkommen durch Crossover und Mutation (6 Individuen)
@@ -230,12 +216,11 @@ def genetic_algorithm():
             child2 = mutate(crossover(parent2, parent1))
             new_children.extend([child1, child2])
         
-        # Erstellen von zufälligen Individuen (6 Individuen)
-        n_randoms = int(POPULATION_SIZE * (1 -0.6))
-        print(n_randoms)
+        # Erstellen von zufälligen Individuen
+        n_randoms = int(POPULATION_SIZE * 0.4)
         random_individuals = [random_exp_individual(population[i]) for i in range(n_randoms)]
 
-        # Neue Population generieren (beste 8 Individuen + 6 durch Crossover + 6 zufällige)
+        # Neue Population generieren (beste Individuen + Crossover + zufällige)
         population = selected_parents + new_children + random_individuals
 
         # Sicherstellen, dass das beste Individuum immer erhalten bleibt
