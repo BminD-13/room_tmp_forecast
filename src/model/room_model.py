@@ -3,61 +3,94 @@ import numpy as np
 import csv
 
 class RaumModell:
-    def __init__(self, dt, param_file=None, **kwargs):
-        self.default_params = {
-            "tau_wall_ambient": 1, "tau_storage_room": 1, "tau_raum_speicher": 1, "tau_raum_wand": 1,
-            "sun_wall": 1, "sun_storage": 1, "sun_room": 1,
-            "n_wand": 1, "n_speicher": 3, "n_raum_storage": 3, "n_raum_wand": 3,
-            "tau_floor_room": 1, "n_floor_room": 3,
-            "tau_floor_ground": 1, "n_floor_ground": 3,
-            "tau_room_floor": 1, "n_room_floor": 3,
-            "tau_floor_heating": 1, "n_floor_heating": 3
-        }
 
+    def __init__(self, dt, param_file=None):
+
+        self.ThermalObjects = []
+
+        #                R  W  S  F  s  a  h  g
+        self.weights = [[0, 1, 1, 1, 1, 0, 0, 0, 1 ,1], # Room
+                        [1, 0, 0, 0, 1, 1, 0, 0, 1 ,1], # Wall
+                        [1, 0, 0, 0, 1, 0, 0, 0, 1 ,1], # Storage
+                        [1, 0, 0, 0, 1, 0, 1, 1, 1 ,1]] # Floor
+        
+        #                    room   wall  storage floor
+        self.objekt_param = [(1,1), (1,1), (1,1), (1,1)]
+        
         self.dt = dt
         
         if param_file:
             self.load_parameters(param_file)
-        
-        for key, value in kwargs.items():
-            if key in self.default_params:
-                self.default_params[key] = value
-        
-        for key, value in self.default_params.items():
-            setattr(self, key, value)
-    
+
     def save_parameters(self, param_file):
         with open(param_file, 'w', newline='') as file:
             writer = csv.writer(file)
-            for key, value in self.default_params.items():
-                writer.writerow([key, value])
+            # Kombinieren von weights und objekt_param zu einer Matrix
+            combined = np.hstack((self.weights, self.objekt_param))
+            # Speichern in CSV-Datei
+            writer.writerows(combined)
     
     def load_parameters(self, param_file):
         with open(param_file, 'r') as file:
             reader = csv.reader(file)
-            params = {rows[0]: float(rows[1]) for rows in reader}
-        for key, value in params.items():
-            if key in self.default_params:
-                setattr(self, key, value)
-    
-    def ptn(self, y, u, tau, n=1):
-        """
-        Simuliert eine PTn-Strecke (n-stufiges Verzögerungsglied).
+            data = np.array([list(map(int, row)) for row in reader])
         
-        Parameter:
-        y:   Liste mit vorherigen Zuständen der PTn-Strecke.
-        u:   Eingangsgröße (z. B. Temperatur, Steuergröße).
-        dt:  Zeitschritt der Simulation.
-        tau: Zeitkonstante des Systems (je größer tau, desto träger die Reaktion).
-        n:   Ordnung der PTn-Strecke (also wie viele hintereinandergeschaltete PT1-Glieder).
-        """
-        if len(y) < n:
-            y = [y[0]] * n  
-        alpha = self.dt / (tau + self.dt)  
-        y_new = y.copy()
-        for i in range(n):
-            y_new[i] = (1 - alpha) * y[i] + alpha * (u if i == 0 else y_new[i - 1])
-        return y_new
+        # Trennen von weights und objekt_param
+        self.weights = data[:, :-2]  # Alle Spalten außer den letzten beiden
+        self.objekt_param = data[:, -2:]  # Die letzten zwei Spalten
+
+    class ThermalObject:
+
+        def __init__(self, tau:list, n:int = 3, y0 = 0):
+            self.set_param(tau, n)
+            self.y = np.ones(n) * y0
+        
+        def set_param(self, n = None, tau=None):
+            assert isinstance(n, int), f"param n is not of type int"
+            self.n   = n
+            assert isinstance(tau, float), f"param tau is not of type float"
+            self.tau = tau
+        
+        def get_tmp(self):
+            return self.y[-1]
+        
+        def calc_ptn(self):
+            y_new = self.y.copy()
+            for i in range(1, self.n):
+                self.y_new[i] = (1 - 1/self.tau) * self.y[i] + 1/self.tau * self.y_new[i - 1]
+            self.y = y_new
+            return self.y[-1]
+        
+        def transfer_warming(self, u, rho=0.1):
+            if rho != 0:
+                self.y[0] += rho * (u - self.y[0])
+        
+        def sun_warming(self, dy, rho=0.1):
+            if rho != 0:
+                self.y[0] += rho * dy        
+
+    def initialize_thermal_objects(self):
+        for i, _ in range(len(self.objekt_param)):
+            self.ThermalObjects.append(self.ThermalObject(
+                tau = self.objekt_param[i,0],
+                n   = self.objekt_param[i,1]
+                )
+            )
+                
+    def raumtemperatur_model2(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
+        m, n = len(self.weights)
+        for k in range(len(tmp_aussen)):
+            for i in range(m):
+                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[0].get_tmp(), self.weights[i,0])
+                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[1].get_tmp(), self.weights[i,1])
+                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[2].get_tmp(), self.weights[i,2])
+                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[3].get_tmp(), self.weights[i,3])
+                self.ThermalObjects[i].sun_warming(sonnenleistung[k] * orthogonalität[k], self.weights[i,5])
+                self.ThermalObjects[i].transfer_warming(tmp_aussen[k], self.weights[i,5])
+                self.ThermalObjects[i].transfer_warming(heating[k] * 30, self.weights[i,6])
+                self.ThermalObjects[i].transfer_warming(1-heating[k] * 7, self.weights[i,7])
+                self.ThermalObjects[i].calc_ptn()
+                self.ThermalObjects[i].get_tmp()          
 
     def orthogonalität(self, azimuth, elevation, surface_azimuth, surface_tilt):
         """
@@ -92,42 +125,12 @@ class RaumModell:
 
         return np.maximum(0, ortho)  # Keine negativen Werte (wenn die Fläche im Schatten liegt)
 
-
-    
     def sonnenstrahlung(self, tmp, sonnenleistung, orthogonalität, param):
         return tmp + sonnenleistung * orthogonalität  * param
     
-    def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
-        tmp_wall =  	[tmp_aussen[0]] * self.n_wand
-        tmp_storage =   [tmp_0] * self.n_speicher
-        tmp_room =      [tmp_0] * self.n_raum_storage
-        tmp_floor =     [(tmp_0 + 10)  / 2] * self.n_room_floor
-        
-        ergebnisse = []
-        for i in range(len(tmp_aussen)):
-
-            tmp_wall = self.ptn(tmp_wall, tmp_aussen[i], self.tau_wall_ambient, self.n_wand)
-            tmp_wall = self.sonnenstrahlung(tmp_wall, sonnenleistung[i], orthogonalität[i], self.sun_wall)
-            
-            tmp_storage = self.ptn(tmp_storage, tmp_room[-1], self.tau_storage_room, self.n_speicher)
-            tmp_storage = self.sonnenstrahlung(tmp_storage, sonnenleistung[i], orthogonalität[i], self.sun_storage)
-            
-            tmp_floor = self.ptn(tmp_floor, 7 + 23 * heating[i], self.tau_floor_heating, self.n_floor_heating)
-            tmp_floor = self.ptn(tmp_floor, tmp_room[-1], self.tau_floor_room, self.n_floor_room)
-            tmp_floor = self.ptn(tmp_floor, 7           , self.tau_floor_ground, self.n_floor_ground)
-
-            tmp_room = self.ptn(tmp_room, tmp_storage[-1], self.tau_raum_speicher, self.n_raum_storage)
-            tmp_room = self.ptn(tmp_room, tmp_floor[-1], self.tau_room_floor, self.n_room_floor)
-            tmp_room = self.ptn(tmp_room, tmp_wall[-1], self.tau_raum_wand, self.n_raum_wand)
-            tmp_room = self.sonnenstrahlung(tmp_room, sonnenleistung[i], orthogonalität[i], self.sun_room)
-            
-            ergebnisse.append(tmp_room[-1])
-        
-        return ergebnisse
-    
     def run_model(self, dataset):
 
-        sunOrtho = self.orthogonalität(dataset["azimuth"], dataset["elevation"], 180, 0)
+        sunOrtho = self.orthogonalität(dataset["azimuth"], dataset["elevation"], 180, 90)
 
         return  self.raumtemperatur_model(
                     tmp_0          = 21.5357487923,
