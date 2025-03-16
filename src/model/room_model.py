@@ -4,23 +4,28 @@ import csv
 
 class RaumModell:
 
-    def __init__(self, dt, param_file=None):
+    def __init__(self, dt, params=None):
 
         self.ThermalObjects = []
 
-        #                R  W  S  F  s  a  h  g
-        self.weights = [[0, 1, 1, 1, 1, 0, 0, 0, 1 ,1], # Room
-                        [1, 0, 0, 0, 1, 1, 0, 0, 1 ,1], # Wall
-                        [1, 0, 0, 0, 1, 0, 0, 0, 1 ,1], # Storage
-                        [1, 0, 0, 0, 1, 0, 1, 1, 1 ,1]] # Floor
-        
+        #                            R  W  S  F  s  a  h  g
+        self.weights = np.matrix([  [0, 1, 1, 1, 1, 0, 0, 0], # Room
+                                    [1, 0, 0, 0, 1, 1, 0, 0], # Wall
+                                    [1, 0, 0, 0, 1, 0, 0, 0], # Storage
+                                    [1, 0, 0, 0, 1, 0, 1, 1]]) # Floor
+
         #                    room   wall  storage floor
-        self.objekt_param = [(1,1), (1,1), (1,1), (1,1)]
-        
+        self.objekt_param = [[1,1], [1,1], [1,1], [1,1]]
+
         self.dt = dt
-        
-        if param_file:
-            self.load_parameters(param_file)
+
+        if isinstance(params, str):  
+            self.load_parameters_from_file(params)  
+
+        elif isinstance(params, np.ndarray):  
+            self.load_parameters_from_matrix(params)
+
+        self.initialize_thermal_objects()
 
     def save_parameters(self, param_file):
         with open(param_file, 'w', newline='') as file:
@@ -29,8 +34,13 @@ class RaumModell:
             combined = np.hstack((self.weights, self.objekt_param))
             # Speichern in CSV-Datei
             writer.writerows(combined)
-    
-    def load_parameters(self, param_file):
+
+    def load_parameters_from_matrix(self, param_file):
+        """Lädt die gespeicherte Matrix und speichert sie in den Objektvariablen."""
+        self.weights = param_file[:, :-2]
+        self.objekt_param = param_file[:, -2:]
+
+    def load_parameters_from_file(self, param_file):
         with open(param_file, 'r') as file:
             reader = csv.reader(file)
             data = np.array([list(map(int, row)) for row in reader])
@@ -41,14 +51,12 @@ class RaumModell:
 
     class ThermalObject:
 
-        def __init__(self, tau:list, n:int = 3, y0 = 0):
-            self.set_param(tau, n)
-            self.y = np.ones(n) * y0
+        def __init__(self, tau:list, n:int , y0 = 0):
+            self.set_param(n, tau)
+            self.y = np.ones(self.n, dtype=np.float64) * y0
         
         def set_param(self, n = None, tau=None):
-            assert isinstance(n, int), f"param n is not of type int"
-            self.n   = n
-            assert isinstance(tau, float), f"param tau is not of type float"
+            self.n   = int(n)
             self.tau = tau
         
         def get_tmp(self):
@@ -57,28 +65,30 @@ class RaumModell:
         def calc_ptn(self):
             y_new = self.y.copy()
             for i in range(1, self.n):
-                self.y_new[i] = (1 - 1/self.tau) * self.y[i] + 1/self.tau * self.y_new[i - 1]
+                y_new[i] = (1 - self.tau) * self.y[i] + self.tau * y_new[i - 1]
             self.y = y_new
             return self.y[-1]
         
         def transfer_warming(self, u, rho=0.1):
             if rho != 0:
-                self.y[0] += rho * (u - self.y[0])
+                self.y[0] = self.y[0] + rho * (u - self.y[0])
         
         def sun_warming(self, dy, rho=0.1):
             if rho != 0:
-                self.y[0] += rho * dy        
+                self.y[0] += rho * dy
 
     def initialize_thermal_objects(self):
-        for i, _ in range(len(self.objekt_param)):
+        for i in range(len(self.objekt_param)):
             self.ThermalObjects.append(self.ThermalObject(
-                tau = self.objekt_param[i,0],
-                n   = self.objekt_param[i,1]
+                tau = self.objekt_param[i, 0],
+                n   = self.objekt_param[i, 1],
+                y0  = 21.5
                 )
             )
                 
-    def raumtemperatur_model2(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
-        m, n = len(self.weights)
+    def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
+        m = len(self.weights)
+        tmp_pred = []
         for k in range(len(tmp_aussen)):
             for i in range(m):
                 self.ThermalObjects[i].transfer_warming(self.ThermalObjects[0].get_tmp(), self.weights[i,0])
@@ -90,7 +100,8 @@ class RaumModell:
                 self.ThermalObjects[i].transfer_warming(heating[k] * 30, self.weights[i,6])
                 self.ThermalObjects[i].transfer_warming(1-heating[k] * 7, self.weights[i,7])
                 self.ThermalObjects[i].calc_ptn()
-                self.ThermalObjects[i].get_tmp()          
+            tmp_pred.append(self.ThermalObjects[0].get_tmp())                
+        return tmp_pred
 
     def orthogonalität(self, azimuth, elevation, surface_azimuth, surface_tilt):
         """
