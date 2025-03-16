@@ -13,8 +13,8 @@ from model.room_model import RaumModell
 # Parameter für den GA
 # ==============================
 POPULATION_SIZE = 50
-GENERATIONS = 100
-MUTATION_RATE = 0.1
+GENERATIONS = 30
+MUTATION_RATE = 0.2
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -27,77 +27,39 @@ def create_log_directory():
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 
-# ==============================
-# Zufälliges Individuum generieren
-# ==============================
-def random_individual():
-    """Generiert ein zufälliges Individuum."""
-    individual = {
-        "tau_raum_wand":    np.random.uniform(0, 1),  #
-        "tau_raum_speicher":np.random.uniform(0, 20),    
-        "tau_storage_room": np.random.uniform(0, 10),  #
-        "tau_wall_ambient": np.random.uniform(0, 10),
-        "sun_wall":         np.random.uniform(0, 1),  #
-        "sun_room":         np.random.uniform(0, 5),  #
-        "sun_storage":      np.random.uniform(0, 5),  # 
-    }
-    return individual
-
-default_params = {'tau_room_floor': 0.0007308456573060104, 'tau_floor_room': 8.537692159867161e-05, 
-                  'tau_floor_heating': 0.34942355933431474, 'tau_floor_ground': 67.50819953071793, 
-                  'tau_raum_wand': 74.49409156302056, 'tau_raum_speicher': 0.04296779378788926, 
-                  'tau_storage_room': 0.06394439372638663, 'tau_wall_ambient': 0.004546326426264305, 
-                  'sun_wall': 5.961600783791798e-06, 'sun_room': 3.584582746166859e-06, 
-                  'sun_storage': 0.0005131202216431431}
-
-default_params = {'tau_room_floor': 0.000536650298676011, 'tau_floor_room': 8.336555175596821e-05, 
-                  'tau_floor_heating': 0.1240000373349645, 'tau_floor_ground': 117.65571736541352, 
-                  'tau_raum_wand': 74.5928848576211, 'tau_raum_speicher': 0.02850856859463459, 
-                  'tau_storage_room': 0.22702189947213852, 'tau_wall_ambient': 0.0019096825039316683, 
-                  'sun_wall': 3.1275351181832673e-06, 'sun_room': 5.49512343146589e-06, 
-                  'sun_storage': 0.00016487848492935202}
+#                 R  W  S  F  s  a  h  g  t  n
+default_matrix = np.matrix([[0, 1, 1, 1, 1, 0, 0, 0, 1 ,1],  # Room
+                            [1, 0, 0, 0, 1, 1, 0, 0, 1 ,1],  # Wall
+                            [1, 0, 0, 0, 1, 0, 0, 0, 1 ,1],  # Storage
+                            [1, 0, 0, 0, 1, 0, 1, 1, 1 ,1]]) # Floor
 
 # ==============================
 # Exponentiell Individuum generieren
 # ==============================
-def random_exp_individual(params=default_params):
-    """Generiert ein zufälliges Individuum."""
-    individual = {
-        "tau_room_floor":    np.random.exponential(1),
-        "tau_floor_room":    np.random.exponential(1),
-        "tau_floor_heating": np.random.exponential(1),
-        "tau_floor_ground":  np.random.exponential(1),
-        "tau_raum_wand":     np.random.exponential(1),
-        "tau_raum_speicher": np.random.exponential(1),
-        "tau_storage_room":  np.random.exponential(1),
-        "tau_wall_ambient":  np.random.exponential(1),
-        "sun_wall":          np.random.exponential(1),
-        "sun_room":          np.random.exponential(1),
-        "sun_storage":       np.random.exponential(1),
-    }
-
-    for key, item in params.items():
-        individual[key] = np.random.exponential(default_params[key])
+def random_exp_individual(default_matrix = default_matrix):
+    individual = np.zeros_like(default_matrix, float)
+    for i in range(default_matrix.shape[0]):
+        for j in range(default_matrix.shape[1]):
+            if default_matrix[i, j] != 0:
+                if j == 9:
+                    individual[i, j] = np.random.poisson(lam=8) + 1
+                else:
+                    wert = np.random.exponential(0.001)
+                    individual[i, j] = wert
     return individual
 
 # ==============================
 # Initialisierung der Population
 # ==============================
-def initialize_population():
-    """Erstellt die initiale Population mit zufälligen Parametern."""
-    population = []
-    for _ in range(POPULATION_SIZE):
-        individual = random_exp_individual(default_params)
-        population.append(individual)
-    return population
-
+def initialize_population(population_size = POPULATION_SIZE):
+    return [random_exp_individual() for _ in range(population_size)]
 
 # ==============================
 # Fitness-Funktion
 # ==============================
 def fitness_function(params, dataset, real_temp):
     """Berechnet die Fitness eines Parametersatzes durch Simulation."""
-    model = RaumModell(dt=1, **params)
+    model = RaumModell(dt=1, params=params)
     predicted_temp = model.run_model(dataset)
     predicted_temp = np.array(predicted_temp)
     real_temp = np.array(real_temp)
@@ -125,32 +87,31 @@ def fitness_function(params, dataset, real_temp):
 # Selektion, Crossover, Mutation
 # ==============================
 def selection(population, scores):
-    """Roulette-Wheel-Selektion basierend auf exponentieller Fitness."""
     probabilities = np.exp(scores - np.max(scores))  
     probabilities /= np.sum(probabilities)
     return population[np.random.choice(len(population), p=probabilities)]
 
 def crossover(parent1, parent2):
-    """Mittelwert-Crossover: Mischt zwei Eltern zu einem Kind."""
-    return {key: (parent1[key] + parent2[key]) / 2 for key in parent1}
+    return np.where(np.random.rand(*parent1.shape) > 0.5, parent1, parent2)
 
-def mutate(individual):
-    """Mutiert ein Individuum durch zufällige Änderungen."""
-    mutated = individual.copy()
-    for key in mutated:
-        if np.random.rand() < MUTATION_RATE:
-            if "n_" in key:
-                mutated[key] = np.clip(mutated[key] + np.random.randint(-1, 2), 1, 5)
-            else:
-                mutated[key] *= np.random.uniform(0.9, 1.1)  
-    return mutated
+def mutate(individual, mutation_rate=0.1):
+    mutation_mask = np.random.rand(*individual.shape) < mutation_rate
+    
+    for i in range(individual.shape[0]):
+        for j in range(individual.shape[1]):
+            if mutation_mask[i, j] and default_matrix[i, j] != 0:
+                if j == 9:
+                    individual[i, j] = np.random.poisson(lam=5) + 1
+                else:
+                    individual[i, j] *= np.random.exponential(0.5)
+    return individual
 
 # ==============================
 # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
 # ==============================
 def plot_prediction_vs_actual(best_params, dataset, real_temp, log_dir):
     """Plottet die Modellvorhersage gegen die tatsächlichen Werte."""
-    model = RaumModell(dt=1, **best_params)
+    model = RaumModell(dt=1, params=best_params)
     predicted_temp = model.run_model(dataset)
 
     plt.figure(figsize=(10, 5))
@@ -202,13 +163,12 @@ def genetic_algorithm():
         best_params_per_epoch.append({"generation": generation + 1, "fitness": best_fitness, "params": best_individual})
         fitness_history.append(best_fitness)
 
-        print(f"Generation {generation+1}: Beste Fitness = {best_fitness:.4f}")
-        #print(f"Parameter: {best_individual}")
+        print(f"Generation {generation + 1}: Beste Fitness = {best_fitness:.4f}")
 
         # Auswahl der besten Individuen (mit hoher Fitness)
         selected_parents = selection_for_best(population, scores, num_parents=int(POPULATION_SIZE * 0.2))
 
-        # Erstellen von Nachkommen durch Crossover und Mutation (6 Individuen)
+        # Erstellen von Nachkommen durch Crossover und Mutation
         new_children = []
         while len(new_children) < POPULATION_SIZE * 0.4:
             parent1, parent2 = random.sample(selected_parents, 2)
@@ -217,19 +177,14 @@ def genetic_algorithm():
             new_children.extend([child1, child2])
         
         # Erstellen von zufälligen Individuen
-        n_randoms = int(POPULATION_SIZE * 0.4)
+        n_randoms = int(POPULATION_SIZE * 0.4 -1)
         random_individuals = [random_exp_individual(population[i]) for i in range(n_randoms)]
 
         # Neue Population generieren (beste Individuen + Crossover + zufällige)
-        population = selected_parents + new_children + random_individuals
-
-        # Sicherstellen, dass das beste Individuum immer erhalten bleibt
-        if best_individual not in population:
-            population[random.randint(0, len(population) - 1)] = best_individual
-
+        population = [best_individual] + selected_parents + new_children + random_individuals
     # Beste Parameter in JSON speichern
-    with open(os.path.join(log_dir, "best_params_per_epoch.json"), "w") as f:
-        json.dump(best_params_per_epoch, f, indent=4)
+    #with open(os.path.join(log_dir, "best_params_per_epoch.json"), "w") as f:
+        #json.dump(best_params_per_epoch, f, indent=4)
 
     # Fitness-Plot speichern
     plot_fitness(fitness_history, log_dir)
