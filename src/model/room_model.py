@@ -58,6 +58,9 @@ class RaumModell:
         def set_param(self, n = None, tau=None):
             self.n   = int(n)
             self.tau = tau
+
+        def set_tmp(self, y0):
+            self.y = np.ones(self.n, dtype=np.float64) * y0
         
         def get_tmp(self):
             return self.y[-1]
@@ -82,7 +85,7 @@ class RaumModell:
             self.ThermalObjects.append(self.ThermalObject(
                 tau = self.objekt_param[i, 0],
                 n   = self.objekt_param[i, 1],
-                y0  = 21.5
+                y0  = 21.0
                 )
             )
                 

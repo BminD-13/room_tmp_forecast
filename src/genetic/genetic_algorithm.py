@@ -12,39 +12,41 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 50
-GENERATIONS = 30
+POPULATION_SIZE = 30
+GENERATIONS = 20
 MUTATION_RATE = 0.2
+
+sub_dir = "genetic_01"
 
 # ==============================
 # Logging-Verzeichnis anlegen
 # ==============================
-def create_log_directory():
+def create_log_directory(additional = ""):
     """Erstellt ein neues Log-Verzeichnis mit Zeitstempel."""
     timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
     #log_dir = os.path.join("./data/logged/genetic", timestamp)
-    log_dir = os.path.join("./data/logged/test", timestamp)
+    log_dir = os.path.join("./data/logged", sub_dir, timestamp + additional)
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 
 #                 R  W  S  F  s  a  h  g  t  n
-default_matrix = np.matrix([[0, 1, 1, 1, 1, 0, 0, 0, 1 ,1],  # Room
-                            [1, 0, 0, 0, 1, 1, 0, 0, 1 ,1],  # Wall
-                            [1, 0, 0, 0, 1, 0, 0, 0, 1 ,1],  # Storage
-                            [1, 0, 0, 0, 1, 0, 1, 1, 1 ,1]]) # Floor
+default_matrix = np.matrix([[0.0, 0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Room
+                            [0.1, 0.0, 0.0, 0.0, 0.1, 0.1, 0.0, 0.0, 0.1 ,1],  # Wall
+                            [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Storage
+                            [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.1, 0.1, 0.1 ,1]]) # Floor
 
 # ==============================
 # Exponentiell Individuum generieren
 # ==============================
-def random_exp_individual(default_matrix = default_matrix):
-    individual = np.zeros_like(default_matrix, float)
-    for i in range(default_matrix.shape[0]):
-        for j in range(default_matrix.shape[1]):
-            if default_matrix[i, j] != 0:
+def random_exp_individual(preset = default_matrix):
+    individual = np.zeros_like(preset, float)
+    for i in range(preset.shape[0]):
+        for j in range(preset.shape[1]):
+            if preset[i, j] != 0:
                 if j == 9:
-                    individual[i, j] = np.random.poisson(lam=8) + 1
+                    individual[i, j] = np.random.poisson(lam=preset[i, j]) + 1
                 else:
-                    wert = np.random.exponential(0.001)
+                    wert = np.random.exponential(preset[i, j])
                     individual[i, j] = wert
     return individual
 
@@ -158,8 +160,11 @@ def genetic_algorithm():
         scores = [fitness_function(ind, dataset, real_temp) for ind in population]
 
         # Beste Fitness & Parameter speichern
-        best_fitness = max(scores)
-        best_individual = population[np.argmax(scores)]
+        if np.all(np.isnan(scores)):  
+            print("Alle Werte sind NaN! Kein valider Maximalwert.")
+        else:
+            best_fitness = np.nanmax(scores)
+            best_individual = population[np.nanargmax(scores)]
         best_params_per_epoch.append({"generation": generation + 1, "fitness": best_fitness, "params": best_individual})
         fitness_history.append(best_fitness)
 
@@ -182,9 +187,6 @@ def genetic_algorithm():
 
         # Neue Population generieren (beste Individuen + Crossover + zufällige)
         population = [best_individual] + selected_parents + new_children + random_individuals
-    # Beste Parameter in JSON speichern
-    #with open(os.path.join(log_dir, "best_params_per_epoch.json"), "w") as f:
-        #json.dump(best_params_per_epoch, f, indent=4)
 
     # Fitness-Plot speichern
     plot_fitness(fitness_history, log_dir)
@@ -192,12 +194,21 @@ def genetic_algorithm():
     # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
     plot_prediction_vs_actual(best_individual, dataset, real_temp, log_dir)
 
+    # NumPy-Arrays in Listen konvertieren
+    for entry in best_params_per_epoch:
+        entry["params"] = entry["params"].tolist()  # Wandelt NumPy-Array in eine Liste um
+
+    # In eine JSON-Datei speichern
+    save_dir = os.path.join(log_dir, "best_params_per_epoch.json")
+    with open(save_dir, "w", encoding="utf-8") as f:
+        json.dump(best_params_per_epoch, f, indent=4, ensure_ascii=False) 
+
     print("\nOptimierung abgeschlossen!")
     print(f"Beste Parameter gespeichert unter: {log_dir}/best_params_per_epoch.json")
     print(f"Fitness-Plot gespeichert unter: {log_dir}/fitness_plot.png")
     print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
 
-    return best_individual
+    return best_params_per_epoch[-1]
 
 # ==============================
 # Auswahl der besten Individuen
@@ -231,6 +242,15 @@ def plot_fitness(fitness_history, log_dir):
 # Starten des Algorithmus
 # ==============================
 if __name__ == "__main__":
-    best_params = genetic_algorithm()
-    print("\nOptimierte Modellparameter:")
-    print(best_params)
+
+    best_params_per_training = []
+
+    for i in range(20):
+        best_params = genetic_algorithm()
+        best_params_per_training.append(best_params)
+
+    # In eine JSON-Datei speichern
+    log_dir = create_log_directory("_sum")
+    save_dir = os.path.join(log_dir, "best_params_per_epoch.json")
+    with open(save_dir, "w", encoding="utf-8") as f:
+        json.dump(best_params_per_training, f, indent=4, ensure_ascii=False) 

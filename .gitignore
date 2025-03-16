@@ -173,3 +173,4 @@ cython_debug/
 # further folders
 .vscode/
 data/logged/test
+data/logged/genetic_01
