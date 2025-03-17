@@ -4,6 +4,7 @@ import os
 import json
 import datetime
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 sys.path.append(os.path.abspath('./src'))  
 from data_module.data_module_static import DataModuleStatic
@@ -12,10 +13,10 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 50
-GENERATIONS = 50
+POPULATION_SIZE = 10
+GENERATIONS = 2
 MUTATION_RATE = 0.2
-TIME_SPAN = 5000
+TIME_SPAN = 10000
 
 sub_dir = "genetic_01"
 
@@ -63,20 +64,20 @@ def initialize_population(population_size = POPULATION_SIZE):
 def fitness_function(params, dataset, real_temp):
     """Berechnet die Fitness eines Parametersatzes durch Simulation."""
     model = RaumModell(dt=1, params=params)
-    predicted_temp = model.run_model(dataset)
-    predicted_temp = np.array(predicted_temp)
+    tmp_pred = model.run_model(dataset)
+    room_tmp_pred = tmp_pred[0]
     real_temp = np.array(real_temp)
 
-    min_length = min(len(predicted_temp), len(real_temp))
-    predicted_temp = predicted_temp[:min_length]
+    min_length = min(len(room_tmp_pred), len(real_temp))
+    room_tmp_pred = room_tmp_pred[:min_length]
     real_temp = real_temp[:min_length]
 
     # Fehlerberechnung mit Zeitgewichtung
     time_weights = np.linspace(1, 2, min_length)
-    weighted_error = np.sum((predicted_temp - real_temp) ** 2 * time_weights)
+    weighted_error = np.sum((room_tmp_pred - real_temp) ** 2 * time_weights)
 
     # Gradientendifferenz
-    pred_grad = np.diff(predicted_temp)
+    pred_grad = np.diff(room_tmp_pred)
     real_grad = np.diff(real_temp)
     gradient_error = np.sum((pred_grad - real_grad) ** 2)
 
@@ -112,14 +113,59 @@ def mutate(individual, mutation_rate=0.1):
 # ==============================
 # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
 # ==============================
+def plot_full_data(best_params, dataset, log_dir):
+    """Plottet die Modellvorhersage gegen die tatsächlichen Werte mit mehreren Subplots."""
+    model = RaumModell(dt=1, params=best_params)
+    tmp_pred = model.run_model(dataset)
+
+    fig = plt.figure(figsize=(10, 15))  # Gesamthöhe der Figur    fig.suptitle("Modellvorhersage vs. Tatsächliche Temperatur", fontsize=14)
+    gs = gridspec.GridSpec(3, 1, height_ratios=[12, 5, 1])  # Höhenverhältnisse für die 5 Subplots
+    axes = []
+    for i in range(3):
+        axes.append(fig.add_subplot(gs[i]))
+
+    # 1. Tatsächliche Temperatur
+    axes[0].plot(dataset["tmpAmbient"], label="Außentemperatur", color="cyan", linestyle="-")
+    axes[0].plot(dataset["tmpRoom"], label="Tatsächliche Temperatur", color="blue", linestyle="-")
+    axes[0].plot(tmp_pred[0], label="Raum", color="red", linestyle="dashed")
+    axes[0].plot(tmp_pred[1], label="Wand", color="yellow", linestyle="dashed")
+    axes[0].plot(tmp_pred[2], label="Inventar", color="green", linestyle="dashed")
+    axes[0].plot(tmp_pred[3], label="Boden", color="orange", linestyle="dashed")
+    axes[0].set_ylabel("Temperatur [°C]")
+    axes[0].legend()
+    axes[0].grid(True)
+
+    # 2. SunPower
+    axes[1].plot(dataset["sunPower"], label="sunPower", color="red", linestyle="-")
+    axes[1].plot(dataset["elevation"], label="elevation", color="orange", linestyle="-")
+    axes[1].set_ylabel("val [0-1023]")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    # 3. Heizleistung
+    axes[2].plot(dataset["xHeating"], label="Heizung", color="red", linestyle="-")
+    axes[2].set_ylabel("Leistung")
+    axes[2].legend()
+    axes[2].grid(True)
+
+    # Layout anpassen und speichern
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(os.path.join(log_dir, "prediction_vs_actual.png"))
+    plt.close()
+
+    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
+
 def plot_prediction_vs_actual(best_params, dataset, log_dir):
     """Plottet die Modellvorhersage gegen die tatsächlichen Werte."""
     model = RaumModell(dt=1, params=best_params)
-    predicted_temp = model.run_model(dataset)
+    tmp_pred = model.run_model(dataset)
 
     plt.figure(figsize=(10, 5))
     plt.plot(dataset["tmpRoom"], label="Tatsächliche Temperatur", color="blue", linestyle="-")
-    plt.plot(predicted_temp, label="Vorhersage", color="red", linestyle="dashed")
+    plt.plot(tmp_pred[0], label="Raum", color="red", linestyle="dashed")
+    plt.plot(tmp_pred[1], label="Wand", color="yellow", linestyle="dashed")
+    plt.plot(tmp_pred[2], label="Inventar", color="green", linestyle="dashed")
+    plt.plot(tmp_pred[3], label="Boden", color="orange", linestyle="dashed")
     plt.xlabel("Zeit")
     plt.ylabel("Temperatur [°C]")
     plt.title("Modellvorhersage vs. Tatsächliche Temperatur")
@@ -157,7 +203,7 @@ def genetic_algorithm():
 
     for generation in range(GENERATIONS):
 
-        random_start = np.random.random_integers(0, length - (TIME_SPAN + 1))
+        random_start = np.random.randint(0, length - (TIME_SPAN + 1))
         dataset = DataModule.get_timespan(timestamps[random_start], timestamps[random_start + TIME_SPAN])
         dataset.reset_index(drop=True, inplace=True)
         real_temp = dataset["tmpRoom"]
@@ -201,7 +247,7 @@ def genetic_algorithm():
     plot_fitness(fitness_history, log_dir)
 
     # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
-    plot_prediction_vs_actual(best_individual, DataModule.get_df(), log_dir)
+    plot_full_data(best_individual, DataModule.get_df(), log_dir)
 
     # NumPy-Arrays in Listen konvertieren
     for entry in best_params_per_epoch:
@@ -254,7 +300,8 @@ if __name__ == "__main__":
 
     best_params_per_training = []
 
-    for i in range(20):
+    for i in range(1):
+        print(i)
         best_params = genetic_algorithm()
         best_params_per_training.append(best_params)
 

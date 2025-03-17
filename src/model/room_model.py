@@ -90,20 +90,22 @@ class RaumModell:
             )
                 
     def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
-        m = len(self.weights)
-        tmp_pred = []
+        K = len(tmp_aussen)
+        M = len(self.weights)
+        tmp_pred = np.zeros((M,K))
+
         for k in range(len(tmp_aussen)):
-            for i in range(m):
-                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[0].get_tmp(), self.weights[i,0])
-                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[1].get_tmp(), self.weights[i,1])
-                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[2].get_tmp(), self.weights[i,2])
-                self.ThermalObjects[i].transfer_warming(self.ThermalObjects[3].get_tmp(), self.weights[i,3])
-                self.ThermalObjects[i].sun_warming(sonnenleistung[k] * orthogonalität[k], self.weights[i,5])
-                self.ThermalObjects[i].transfer_warming(tmp_aussen[k], self.weights[i,5])
-                self.ThermalObjects[i].transfer_warming(heating[k] * 30, self.weights[i,6])
-                self.ThermalObjects[i].transfer_warming(1-heating[k] * 7, self.weights[i,7])
-                self.ThermalObjects[i].calc_ptn()
-            tmp_pred.append(self.ThermalObjects[0].get_tmp())                
+            for m in range(M):
+                self.ThermalObjects[m].transfer_warming(self.ThermalObjects[0].get_tmp(), self.weights[m,0])
+                self.ThermalObjects[m].transfer_warming(self.ThermalObjects[1].get_tmp(), self.weights[m,1])
+                self.ThermalObjects[m].transfer_warming(self.ThermalObjects[2].get_tmp(), self.weights[m,2])
+                self.ThermalObjects[m].transfer_warming(self.ThermalObjects[3].get_tmp(), self.weights[m,3])
+                self.ThermalObjects[m].sun_warming(sonnenleistung[k] * orthogonalität[k], self.weights[m,5])
+                self.ThermalObjects[m].transfer_warming(tmp_aussen[k], self.weights[m,5])
+                self.ThermalObjects[m].transfer_warming(heating[k] * 30, self.weights[m,6])
+                self.ThermalObjects[m].transfer_warming(1-heating[k] * 7, self.weights[m,7])
+                self.ThermalObjects[m].calc_ptn()
+                tmp_pred[m, k] = self.ThermalObjects[m].get_tmp()        
         return tmp_pred
 
     def orthogonalität(self, azimuth, elevation, surface_azimuth, surface_tilt):
