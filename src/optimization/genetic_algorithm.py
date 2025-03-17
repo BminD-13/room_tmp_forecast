@@ -13,12 +13,12 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 10
-GENERATIONS = 2
+POPULATION_SIZE = 50
+GENERATIONS = 5
 MUTATION_RATE = 0.2
-TIME_SPAN = 10000
+TIME_SPAN = 15000
 
-sub_dir = "genetic_01"
+sub_dir = "genetic_02"
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -48,8 +48,7 @@ def random_exp_individual(preset = default_matrix):
                 if j == 9:
                     individual[i, j] = np.random.poisson(lam=preset[i, j]) + 1
                 else:
-                    wert = np.random.exponential(preset[i, j])
-                    individual[i, j] = wert
+                    individual[i, j] = np.random.exponential(preset[i, j])
     return individual
 
 # ==============================
@@ -57,6 +56,30 @@ def random_exp_individual(preset = default_matrix):
 # ==============================
 def initialize_population(population_size = POPULATION_SIZE):
     return [random_exp_individual() for _ in range(population_size)]
+
+def load_param_from_json(root_dir, fitness_filter=-10000):
+    matrices = []
+
+    # Alle Dateien in Unterordnern rekursiv durchsuchen
+    for dirpath, _, filenames in os.walk(root_dir):
+        for file in filenames:
+            if file.endswith(".json"):  # Nur JSON-Dateien verarbeiten
+                file_path = os.path.join(dirpath, file)
+                
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)  # JSON laden
+                    
+                    # `params`-Matrizen aus jedem Eintrag extrahieren
+                    for entry in data:
+                        if "params" in entry:
+                            if entry["fitness"] > fitness_filter:
+                                matrices.append(np.array(entry["params"]))  # In NumPy-Array umwandeln
+
+                except (json.JSONDecodeError, KeyError, ValueError) as e:
+                    print(f"Fehler beim Einlesen von {file_path}: {e}")
+
+    return matrices
 
 # ==============================
 # Fitness-Funktion
@@ -266,6 +289,155 @@ def genetic_algorithm():
     return best_params_per_epoch[-1]
 
 # ==============================
+# Genetischer Algorithmus zur lokalen optimierung mit bestehenden individuen
+# ==============================
+def genetic_local_algo(folder_with_json_files):
+    """Führt den genetischen Algorithmus aus und speichert Ergebnisse."""
+    
+    # Daten laden
+    DataModule = DataModuleStatic()
+    DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
+    timestamps = DataModule.df["timestamp"]
+    length = DataModule.len()
+
+    # Log-Ordner erstellen
+    log_dir = create_log_directory()
+
+    # Population initialisieren
+    population = load_param_from_json(root_dir=folder_with_json_files)
+    print(f"Anzahl Individuen: {len(population)}")
+
+    best_params_per_epoch = []
+    fitness_history = []
+
+    for generation in range(GENERATIONS):
+
+        random_start = np.random.randint(0, length - (TIME_SPAN + 1))
+        dataset = DataModule.get_timespan(timestamps[random_start], timestamps[random_start + TIME_SPAN])
+        dataset.reset_index(drop=True, inplace=True)
+        real_temp = dataset["tmpRoom"]
+
+        scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+
+        # Beste Fitness & Parameter speichern
+        if np.all(np.isnan(scores)):  
+            print("Alle Werte sind NaN! Kein valider Maximalwert.")
+        else:
+            best_fitness = np.nanmax(scores)
+            best_individual = population[np.nanargmax(scores)]
+        best_params_per_epoch.append({"generation": generation + 1, "fitness": best_fitness, "params": best_individual})
+        fitness_history.append(best_fitness)
+
+        print(f"Generation {generation + 1}: Beste Fitness = {best_fitness:.4f}")
+
+        # Auswahl der besten Individuen (mit hoher Fitness)
+        selected_parents = selection_for_best(population, scores, num_parents=int(POPULATION_SIZE * 0.4))
+
+        # Erstellen von Nachkommen durch Crossover und Mutation
+        new_children = []
+        while len(new_children) < POPULATION_SIZE * 0.5:
+            parent1, parent2 = random.sample(selected_parents, 2)
+            child1 = mutate(crossover(parent1, parent2))
+            child2 = mutate(crossover(parent2, parent1))
+            new_children.extend([child1, child2])
+        
+        # besten aus allen generationen erhalten
+        fitness_scores = np.array([entry["fitness"] for entry in best_params_per_epoch])
+        best_index = np.nanargmax(fitness_scores)
+        all_time_best = best_params_per_epoch[best_index]["params"]        # Erstellen von zufälligen Individuen
+
+        # Neue Population generieren (beste Individuen + Crossover + zufällige)
+        population = [all_time_best] + selected_parents + new_children
+
+    # Fitness-Plot speichern
+    plot_fitness(fitness_history, log_dir)
+
+    # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
+    plot_full_data(best_individual, DataModule.get_df(), log_dir)
+
+    # NumPy-Arrays in Listen konvertieren
+    for entry in best_params_per_epoch:
+        entry["params"] = entry["params"].tolist()  # Wandelt NumPy-Array in eine Liste um
+
+    # In eine JSON-Datei speichern
+    save_dir = os.path.join(log_dir, "best_params_per_epoch.json")
+    with open(save_dir, "w", encoding="utf-8") as f:
+        json.dump(best_params_per_epoch, f, indent=4, ensure_ascii=False) 
+
+    print("\nOptimierung abgeschlossen!")
+    print(f"Beste Parameter gespeichert unter: {log_dir}/best_params_per_epoch.json")
+    print(f"Fitness-Plot gespeichert unter: {log_dir}/fitness_plot.png")
+    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
+
+    return best_params_per_epoch[-1]
+
+# ==============================
+# Genetischer Algorithmus zur lokalen optimierung mit bestehenden individuen
+# ==============================
+def filter_results_by_fitness(folder_with_json_files, n=200):
+    """Führt den genetischen Algorithmus aus und speichert Ergebnisse."""
+    
+    # Daten laden
+    DataModule = DataModuleStatic()
+    DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
+    timestamps = DataModule.df["timestamp"]
+    length = DataModule.len()
+
+    # Log-Ordner erstellen
+    log_dir = create_log_directory("filtered_by_fitness")
+
+    # Population initialisieren
+    population = load_param_from_json(root_dir=folder_with_json_files)
+    print(f"Anzahl Individuen: {len(population)}")
+
+    best_params_per_epoch = []
+    fitness_history = []
+
+
+    dataset = DataModule.get_df()
+    real_temp = dataset["tmpRoom"]
+
+    scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+    
+    if np.all(np.isnan(scores)):  
+        print("Alle Werte sind NaN! Kein valider Maximalwert.")
+    else:
+        # Sortiere die Indizes nach Score (höchste zuerst)
+        sorted_indices = np.argsort(scores)[::-1]  # Absteigend sortieren
+        sorted_indices = [idx for idx in sorted_indices if not np.isnan(scores[idx])]  # NaN entfernen
+        
+        # N beste Individuen auswählen
+        best_individuals = [population[idx] for idx in sorted_indices[:n]]
+        best_fitness_values = [scores[idx] for idx in sorted_indices[:n]]
+
+        # Speichern der besten Individuen
+        for j in range(len(best_individuals)):
+            best_params_per_epoch.append({
+                "generation": i + 1,
+                "fitness": best_fitness_values[j],
+                "params": best_individuals[j]
+            })
+        
+        # Das beste Fitness-Ergebnis speichern
+        fitness_history.append(best_fitness_values[0])
+
+    # NumPy-Arrays in Listen konvertieren
+    for entry in fitness_history:
+        entry["params"] = entry["params"].tolist()  # Wandelt NumPy-Array in eine Liste um
+
+    # In eine JSON-Datei speichern
+    save_dir = os.path.join(log_dir, "best_params_per_epoch.json")
+    with open(save_dir, "w", encoding="utf-8") as f:
+        json.dump(best_params_per_epoch, f, indent=4, ensure_ascii=False) 
+
+    print("\nOptimierung abgeschlossen!")
+    print(f"Beste Parameter gespeichert unter: {log_dir}/best_params_per_epoch.json")
+    print(f"Fitness-Plot gespeichert unter: {log_dir}/fitness_plot.png")
+    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
+
+    return best_params_per_epoch[-1]
+
+# ==============================
 # Auswahl der besten Individuen
 # ==============================
 def selection_for_best(population, scores, num_parents):
@@ -302,7 +474,8 @@ if __name__ == "__main__":
 
     for i in range(1):
         print(i)
-        best_params = genetic_algorithm()
+        #best_params = genetic_algorithm()
+        best_params = genetic_local_algo("data\logged\genetic_01")
         best_params_per_training.append(best_params)
 
     # In eine JSON-Datei speichern

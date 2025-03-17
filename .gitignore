@@ -174,3 +174,4 @@ cython_debug/
 .vscode/
 data/logged/test
 data/logged/genetic_01
+data/logged/genetic_02
