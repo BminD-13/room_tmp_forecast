@@ -12,9 +12,10 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 30
-GENERATIONS = 20
+POPULATION_SIZE = 50
+GENERATIONS = 50
 MUTATION_RATE = 0.2
+TIME_SPAN = 5000
 
 sub_dir = "genetic_01"
 
@@ -111,13 +112,13 @@ def mutate(individual, mutation_rate=0.1):
 # ==============================
 # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
 # ==============================
-def plot_prediction_vs_actual(best_params, dataset, real_temp, log_dir):
+def plot_prediction_vs_actual(best_params, dataset, log_dir):
     """Plottet die Modellvorhersage gegen die tatsächlichen Werte."""
     model = RaumModell(dt=1, params=best_params)
     predicted_temp = model.run_model(dataset)
 
     plt.figure(figsize=(10, 5))
-    plt.plot(real_temp, label="Tatsächliche Temperatur", color="blue", linestyle="-")
+    plt.plot(dataset["tmpRoom"], label="Tatsächliche Temperatur", color="blue", linestyle="-")
     plt.plot(predicted_temp, label="Vorhersage", color="red", linestyle="dashed")
     plt.xlabel("Zeit")
     plt.ylabel("Temperatur [°C]")
@@ -142,10 +143,8 @@ def genetic_algorithm():
     # Daten laden
     DataModule = DataModuleStatic()
     DataModule.load_csv(r"data\training\240331_Dataset_01.csv")
-    start, end = DataModule.get_time_range()
-    endtime = DataModule.df["timestamp"]
-    dataset = DataModule.get_timespan(start, endtime[9000])
-    real_temp = dataset["tmpRoom"]
+    timestamps = DataModule.df["timestamp"]
+    length = DataModule.len()
 
     # Log-Ordner erstellen
     log_dir = create_log_directory()
@@ -157,6 +156,12 @@ def genetic_algorithm():
     fitness_history = []
 
     for generation in range(GENERATIONS):
+
+        random_start = np.random.random_integers(0, length - (TIME_SPAN + 1))
+        dataset = DataModule.get_timespan(timestamps[random_start], timestamps[random_start + TIME_SPAN])
+        dataset.reset_index(drop=True, inplace=True)
+        real_temp = dataset["tmpRoom"]
+
         scores = [fitness_function(ind, dataset, real_temp) for ind in population]
 
         # Beste Fitness & Parameter speichern
@@ -181,18 +186,22 @@ def genetic_algorithm():
             child2 = mutate(crossover(parent2, parent1))
             new_children.extend([child1, child2])
         
-        # Erstellen von zufälligen Individuen
+        # besten aus allen generationen erhalten
+        fitness_scores = np.array([entry["fitness"] for entry in best_params_per_epoch])
+        best_index = np.nanargmax(fitness_scores)
+        all_time_best = best_params_per_epoch[best_index]["params"]        # Erstellen von zufälligen Individuen
+
         n_randoms = int(POPULATION_SIZE * 0.4 -1)
         random_individuals = [random_exp_individual(population[i]) for i in range(n_randoms)]
 
         # Neue Population generieren (beste Individuen + Crossover + zufällige)
-        population = [best_individual] + selected_parents + new_children + random_individuals
+        population = [all_time_best] + selected_parents + new_children + random_individuals
 
     # Fitness-Plot speichern
     plot_fitness(fitness_history, log_dir)
 
     # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
-    plot_prediction_vs_actual(best_individual, dataset, real_temp, log_dir)
+    plot_prediction_vs_actual(best_individual, DataModule.get_df(), log_dir)
 
     # NumPy-Arrays in Listen konvertieren
     for entry in best_params_per_epoch:

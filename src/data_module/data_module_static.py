@@ -59,6 +59,9 @@ class DataModuleStatic:
     def get_df(self):
         return self.df
     
+    def len(self):
+        return len(self.df)
+    
     def get_timespan(self, start_time: str = None, end_time: str = None):
         """
         Filtert den DataFrame nach einer angegebenen Zeitspanne.
