@@ -13,9 +13,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 50
-GENERATIONS = 5
-MUTATION_RATE = 0.2
+POPULATION_SIZE = 60
+GENERATIONS = 30
+MUTATION_RATE = 0.1
 TIME_SPAN = 15000
 
 sub_dir = "genetic_02"
@@ -31,7 +31,7 @@ def create_log_directory(additional = ""):
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 
-#                 R  W  S  F  s  a  h  g  t  n
+#                             R    W    S    F    s    a    h    g    t   n
 default_matrix = np.matrix([[0.0, 0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Room
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.1, 0.0, 0.0, 0.1 ,1],  # Wall
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Storage
@@ -57,7 +57,7 @@ def random_exp_individual(preset = default_matrix):
 def initialize_population(population_size = POPULATION_SIZE):
     return [random_exp_individual() for _ in range(population_size)]
 
-def load_param_from_json(root_dir, fitness_filter=-10000):
+def load_param_from_json(root_dir, fitness_filter=-30000):
     matrices = []
 
     # Alle Dateien in Unterordnern rekursiv durchsuchen
@@ -89,15 +89,15 @@ def fitness_function(params, dataset, real_temp):
     model = RaumModell(dt=1, params=params)
     tmp_pred = model.run_model(dataset)
     room_tmp_pred = tmp_pred[0]
+    wall_tmp_pred_max = np.max(tmp_pred[1])
     real_temp = np.array(real_temp)
 
     min_length = min(len(room_tmp_pred), len(real_temp))
     room_tmp_pred = room_tmp_pred[:min_length]
     real_temp = real_temp[:min_length]
 
-    # Fehlerberechnung mit Zeitgewichtung
-    time_weights = np.linspace(1, 2, min_length)
-    weighted_error = np.sum((room_tmp_pred - real_temp) ** 2 * time_weights)
+    # Fehlerberechnung
+    quadr_error = np.sum((room_tmp_pred - real_temp) ** 2)
 
     # Gradientendifferenz
     pred_grad = np.diff(room_tmp_pred)
@@ -106,7 +106,11 @@ def fitness_function(params, dataset, real_temp):
 
     # Normalisierung
     sigma_real = np.std(real_temp)
-    total_error = (weighted_error + gradient_error) / (sigma_real + 1e-6)
+    total_error = (quadr_error + gradient_error) / (sigma_real + 1e-6)
+
+    # Unrealistische Wandtemperatur 
+    if wall_tmp_pred_max > 30:
+        total_error *= wall_tmp_pred_max / 30
 
     return -total_error  # Negativer Fehler für Maximierung
 
@@ -215,6 +219,10 @@ def genetic_algorithm():
     timestamps = DataModule.df["timestamp"]
     length = DataModule.len()
 
+    dataset = DataModule.get_timespan(timestamps[8000], timestamps[20000])
+    dataset.reset_index(drop=True, inplace=True)
+    real_temp = dataset["tmpRoom"]
+
     # Log-Ordner erstellen
     log_dir = create_log_directory()
 
@@ -226,10 +234,10 @@ def genetic_algorithm():
 
     for generation in range(GENERATIONS):
 
-        random_start = np.random.randint(0, length - (TIME_SPAN + 1))
-        dataset = DataModule.get_timespan(timestamps[random_start], timestamps[random_start + TIME_SPAN])
-        dataset.reset_index(drop=True, inplace=True)
-        real_temp = dataset["tmpRoom"]
+        # random_start = np.random.randint(0, length - (TIME_SPAN + 1))
+        # dataset = DataModule.get_timespan(timestamps[random_start], timestamps[random_start + TIME_SPAN])
+        # dataset.reset_index(drop=True, inplace=True)
+        # real_temp = dataset["tmpRoom"]
 
         scores = [fitness_function(ind, dataset, real_temp) for ind in population]
 
@@ -475,7 +483,7 @@ if __name__ == "__main__":
     for i in range(1):
         print(i)
         #best_params = genetic_algorithm()
-        best_params = genetic_local_algo("data\logged\genetic_01")
+        best_params = genetic_local_algo("data\logged\genetic_02")
         best_params_per_training.append(best_params)
 
     # In eine JSON-Datei speichern
