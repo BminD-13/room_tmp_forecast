@@ -80,12 +80,12 @@ class RaumModell:
             if rho != 0:
                 self.y[0] += rho * dy
 
-    def initialize_thermal_objects(self, y0=[20.5, 18, 19, 15]):
+    def initialize_thermal_objects(self, y0=[20.5, 20.5, 20.5, 20.5]):
         for i in range(len(self.objekt_param)):
             self.ThermalObjects.append(self.ThermalObject(
                 tau = self.objekt_param[i, 0],
                 n   = self.objekt_param[i, 1],
-                y0  = y0
+                y0  = y0[i]
                 )
             )
 

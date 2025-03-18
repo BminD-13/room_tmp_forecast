@@ -14,8 +14,8 @@ from model.room_model import RaumModell
 # Parameter für den GA
 # ==============================
 POPULATION_SIZE = 50
-GENERATIONS = 10
-MUTATION_RATE = 0.2
+GENERATIONS = 30
+MUTATION_RATE = 0.25
 TIME_SPAN = 15000
 
 sub_dir = "genetic_02"
@@ -134,7 +134,7 @@ def mutate(individual, mutation_rate=0.1):
                 if j == 9:
                     individual[i, j] = np.random.poisson(lam=5) + 1
                 else:
-                    individual[i, j] *= np.random.exponential(0.5)
+                    individual[i, j] *= np.random.exponential(0.05)
     return individual
 
 # ==============================
@@ -308,6 +308,10 @@ def genetic_local_algo(folder_with_json_files):
     timestamps = DataModule.df["timestamp"]
     length = DataModule.len()
 
+    dataset = DataModule.get_timespan(timestamps[8000], timestamps[20000])
+    dataset.reset_index(drop=True, inplace=True)
+    real_temp = dataset["tmpRoom"]
+
     # Log-Ordner erstellen
     log_dir = create_log_directory()
 
@@ -320,12 +324,8 @@ def genetic_local_algo(folder_with_json_files):
 
     for generation in range(GENERATIONS):
 
-        random_start = np.random.randint(0, length - (TIME_SPAN + 1))
-        dataset = DataModule.get_timespan(timestamps[random_start], timestamps[random_start + TIME_SPAN])
-        dataset.reset_index(drop=True, inplace=True)
-        real_temp = dataset["tmpRoom"]
-
         scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+        print(scores)
 
         # Beste Fitness & Parameter speichern
         if np.all(np.isnan(scores)):  
@@ -343,7 +343,7 @@ def genetic_local_algo(folder_with_json_files):
 
         # Erstellen von Nachkommen durch Crossover und Mutation
         new_children = []
-        while len(new_children) < POPULATION_SIZE * 0.5:
+        while len(new_children) < POPULATION_SIZE * 0.6 - 1:
             parent1, parent2 = random.sample(selected_parents, 2)
             child1 = mutate(crossover(parent1, parent2))
             child2 = mutate(crossover(parent2, parent1))
@@ -481,14 +481,14 @@ if __name__ == "__main__":
 
     best_params_per_training = []
 
-    for i in range(10):
+    for i in range(1):
         print(i)
-        best_params = genetic_algorithm()
-        #best_params = genetic_local_algo("data\logged\genetic_02")
+        #best_params = genetic_algorithm()
+        best_params = genetic_local_algo("data\logged\genetic")
         best_params_per_training.append(best_params)
 
     # In eine JSON-Datei speichern
     log_dir = create_log_directory("_sum")
     save_dir = os.path.join(log_dir, "best_params_per_epoch.json")
-    with open(save_dir, "w", encoding="utf-8") as f:
-        json.dump(best_params_per_training, f, indent=4, ensure_ascii=False) 
+    #with open(save_dir, "w", encoding="utf-8") as f:
+        #json.dump(best_params_per_training, f, indent=4, ensure_ascii=False)
