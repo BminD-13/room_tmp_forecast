@@ -13,8 +13,8 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 60
-GENERATIONS = 30
+POPULATION_SIZE = 10
+GENERATIONS = 4
 MUTATION_RATE = 0.1
 TIME_SPAN = 15000
 
@@ -465,7 +465,8 @@ def selection_for_best(population, scores, num_parents):
 def plot_fitness(fitness_history, log_dir):
     """Erstellt und speichert den Fitness-Plot."""
     plt.figure(figsize=(10, 5))
-    plt.plot(range(1, len(fitness_history) + 1), fitness_history, marker="o", linestyle="-", color="b")
+    plt.plot(range(1, len(fitness_history) + 1), np.abs(fitness_history), marker="o", linestyle="-", color="b")
+    plt.yscale("log")    
     plt.xlabel("Generation")
     plt.ylabel("Fitness")
     plt.title("Fitness-Entwicklung über Generationen")
@@ -482,8 +483,8 @@ if __name__ == "__main__":
 
     for i in range(1):
         print(i)
-        #best_params = genetic_algorithm()
-        best_params = genetic_local_algo("data\logged\genetic_02")
+        best_params = genetic_algorithm()
+        #best_params = genetic_local_algo("data\logged\genetic_02")
         best_params_per_training.append(best_params)
 
     # In eine JSON-Datei speichern
