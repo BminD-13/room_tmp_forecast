@@ -65,12 +65,22 @@ class RaumModell:
         def get_tmp(self):
             return self.y[-1]
         
+        def get_tmp_in(self):
+            return self.y[0]
+        
         def calc_ptn(self):
             y_new = self.y.copy()
             for i in range(1, self.n):
                 y_new[i] = (1 - self.tau) * self.y[i] + self.tau * y_new[i - 1]
             self.y = y_new
             return self.y[-1]
+        
+        def calc_ptn_reverse(self):
+            y_new = self.y.copy()
+            for i in range(self.n-1, -1 ,-1):
+                y_new[i] = (1 - self.tau) * self.y[i] + self.tau * y_new[i + 1]
+            self.y = y_new
+            return self.y[0]
         
         def transfer_warming(self, u, rho=0.1):
             if rho != 0:
