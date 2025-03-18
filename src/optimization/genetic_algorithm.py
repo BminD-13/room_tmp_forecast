@@ -13,9 +13,9 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 10
-GENERATIONS = 4
-MUTATION_RATE = 0.1
+POPULATION_SIZE = 50
+GENERATIONS = 10
+MUTATION_RATE = 0.2
 TIME_SPAN = 15000
 
 sub_dir = "genetic_02"
@@ -278,7 +278,7 @@ def genetic_algorithm():
     plot_fitness(fitness_history, log_dir)
 
     # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
-    plot_full_data(best_individual, DataModule.get_df(), log_dir)
+    plot_full_data(best_individual, dataset, log_dir)
 
     # NumPy-Arrays in Listen konvertieren
     for entry in best_params_per_epoch:
@@ -481,7 +481,7 @@ if __name__ == "__main__":
 
     best_params_per_training = []
 
-    for i in range(1):
+    for i in range(10):
         print(i)
         best_params = genetic_algorithm()
         #best_params = genetic_local_algo("data\logged\genetic_02")

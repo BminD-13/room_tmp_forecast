@@ -80,16 +80,16 @@ class RaumModell:
             if rho != 0:
                 self.y[0] += rho * dy
 
-    def initialize_thermal_objects(self):
+    def initialize_thermal_objects(self, y0=[20.5, 18, 19, 15]):
         for i in range(len(self.objekt_param)):
             self.ThermalObjects.append(self.ThermalObject(
                 tau = self.objekt_param[i, 0],
                 n   = self.objekt_param[i, 1],
-                y0  = 21.0
+                y0  = y0
                 )
             )
-                
-    def raumtemperatur_model(self, tmp_0, tmp_aussen, sonnenleistung, orthogonalität, heating):
+
+    def raumtemperatur_model(self, tmp_aussen, sonnenleistung, orthogonalität, heating):
         K = len(tmp_aussen)
         M = len(self.weights)
         tmp_pred = np.zeros((M,K))
@@ -149,7 +149,6 @@ class RaumModell:
         sunOrtho = self.orthogonalität(dataset["azimuth"], dataset["elevation"], 180, 90)
 
         return  self.raumtemperatur_model(
-                    tmp_0          = 21.5357487923,
                     tmp_aussen     = dataset["tmpAmbient"],
                     sonnenleistung = dataset["sunPower"],
                     heating        = dataset["xHeating"],
