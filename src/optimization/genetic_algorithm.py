@@ -361,7 +361,7 @@ def genetic_local_algo(folder_with_json_files):
     plot_fitness(fitness_history, log_dir)
 
     # Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
-    plot_full_data(best_individual, DataModule.get_df(), log_dir)
+    plot_full_data(best_individual, dataset, log_dir)
 
     # NumPy-Arrays in Listen konvertieren
     for entry in best_params_per_epoch:
