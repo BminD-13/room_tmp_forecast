@@ -13,8 +13,8 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 50
-GENERATIONS = 30
+POPULATION_SIZE = 40
+GENERATIONS = 20
 MUTATION_RATE = 0.25
 TIME_SPAN = 15000
 
@@ -35,7 +35,7 @@ def create_log_directory(additional = ""):
 default_matrix = np.matrix([[0.0, 0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Room
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.1, 0.0, 0.0, 0.1 ,1],  # Wall
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Storage
-                            [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.1, 0.1, 0.1 ,1]]) # Floor
+                            [0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1 ,1]]) # Floor
 
 # ==============================
 # Exponentiell Individuum generieren
@@ -325,7 +325,6 @@ def genetic_local_algo(folder_with_json_files):
     for generation in range(GENERATIONS):
 
         scores = [fitness_function(ind, dataset, real_temp) for ind in population]
-        print(scores)
 
         # Beste Fitness & Parameter speichern
         if np.all(np.isnan(scores)):  
@@ -481,10 +480,10 @@ if __name__ == "__main__":
 
     best_params_per_training = []
 
-    for i in range(1):
+    for i in range(2):
         print(i)
-        #best_params = genetic_algorithm()
-        best_params = genetic_local_algo("data\logged\genetic")
+        best_params = genetic_algorithm()
+        #best_params = genetic_local_algo("data\logged\genetic")
         best_params_per_training.append(best_params)
 
     # In eine JSON-Datei speichern

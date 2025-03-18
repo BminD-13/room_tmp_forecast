@@ -12,7 +12,7 @@ class RaumModell:
         self.weights = np.matrix([  [0, 1, 1, 1, 1, 0, 0, 0], # Room
                                     [1, 0, 0, 0, 1, 1, 0, 0], # Wall
                                     [1, 0, 0, 0, 1, 0, 0, 0], # Storage
-                                    [1, 0, 0, 0, 1, 0, 1, 1]]) # Floor
+                                    [1, 0, 0, 0, 0, 0, 1, 1]]) # Floor
 
         #                    room   wall  storage floor
         self.objekt_param = [[1,1], [1,1], [1,1], [1,1]]
