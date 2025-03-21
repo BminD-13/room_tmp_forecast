@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import datetime
+import evaluate
 
 sys.path.append(os.path.abspath('./src'))  
 from data_module.data_module_static import DataModuleStatic
@@ -81,39 +82,6 @@ def load_param_from_json(root_dir, fitness_filter=-30000):
     return matrices
 
 # ==============================
-# Fitness-Funktion
-# ==============================
-def fitness_function(params, dataset, real_temp):
-    """Berechnet die Fitness eines Parametersatzes durch Simulation."""
-    model = RaumModell(dt=1, params=params)
-    tmp_pred = model.run_model(dataset)
-    room_tmp_pred = tmp_pred[0]
-    wall_tmp_pred_max = np.max(tmp_pred[1])
-    real_temp = np.array(real_temp)
-
-    min_length = min(len(room_tmp_pred), len(real_temp))
-    room_tmp_pred = room_tmp_pred[:min_length]
-    real_temp = real_temp[:min_length]
-
-    # Fehlerberechnung
-    quadr_error = np.sum((room_tmp_pred - real_temp) ** 2)
-
-    # Gradientendifferenz
-    pred_grad = np.diff(room_tmp_pred)
-    real_grad = np.diff(real_temp)
-    gradient_error = np.sum((pred_grad - real_grad) ** 2)
-
-    # Normalisierung
-    sigma_real = np.std(real_temp)
-    total_error = (quadr_error + gradient_error) / (sigma_real + 1e-6)
-
-    # Unrealistische Wandtemperatur 
-    if wall_tmp_pred_max > 30:
-        total_error *= wall_tmp_pred_max / 30
-
-    return -total_error  # Negativer Fehler für Maximierung
-
-# ==============================
 # Selektion, Crossover, Mutation
 # ==============================
 def selection(population, scores):
@@ -170,7 +138,7 @@ def genetic_algorithm():
         # dataset.reset_index(drop=True, inplace=True)
         # real_temp = dataset["tmpRoom"]
 
-        scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+        scores = [evaluate.fitness(ind, dataset, real_temp) for ind in population]
 
         # Beste Fitness & Parameter speichern
         if np.all(np.isnan(scores)):  
@@ -255,7 +223,7 @@ def genetic_local_algo(folder_with_json_files):
 
     for generation in range(GENERATIONS):
 
-        scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+        scores = [evaluate.fitness(ind, dataset, real_temp) for ind in population]
 
         # Beste Fitness & Parameter speichern
         if np.all(np.isnan(scores)):  
@@ -335,7 +303,7 @@ def filter_results_by_fitness(folder_with_json_files, n=200):
     dataset = DataModule.get_df()
     real_temp = dataset["tmpRoom"]
 
-    scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+    scores = [evaluate.fitness(ind, dataset, real_temp) for ind in population]
     
     if np.all(np.isnan(scores)):  
         print("Alle Werte sind NaN! Kein valider Maximalwert.")
