@@ -54,10 +54,11 @@ class RaumModell:
         def __init__(self, tau:list, n:int , y0 = 0):
             self.set_param(n, tau)
             self.y = np.ones(self.n, dtype=np.float64) * y0
+            self.dy = 0
         
         def set_param(self, n = None, tau=None):
-            self.n   = int(n)
-            self.tau = tau
+            self.n = int(n) if n else 1
+            self.tau = tau if tau else 0.01
 
         def set_tmp(self, y0):
             self.y = np.ones(self.n, dtype=np.float64) * y0
@@ -65,30 +66,28 @@ class RaumModell:
         def get_tmp(self):
             return self.y[-1]
         
-        def get_tmp_in(self):
-            return self.y[0]
-        
         def calc_ptn(self):
+            self.y[0] += self.dy
             y_new = self.y.copy()
             for i in range(1, self.n):
                 y_new[i] = (1 - self.tau) * self.y[i] + self.tau * y_new[i - 1]
             self.y = y_new
+            self.dy = 0
             return self.y[-1]
         
-        def calc_ptn_reverse(self):
-            y_new = self.y.copy()
-            for i in range(self.n-1, -1 ,-1):
-                y_new[i] = (1 - self.tau) * self.y[i] + self.tau * y_new[i + 1]
-            self.y = y_new
-            return self.y[0]
-        
+        def calc_ptn_40plus(self): # lohnt sich leider erst ab n = 40 ... shit
+            y_shift = np.roll(self.y, 1)  # Vorne u, hinten abgeschnitten
+            y_shift[0] = self.y[0] + self.dy
+            self.y = (1 - self.tau) * self.y + self.tau * y_shift
+            self.dy = 0
+
         def transfer_warming(self, u, rho=0.1):
             if rho != 0:
-                self.y[0] = self.y[0] + rho * (u - self.y[0])
+                self.dy += rho * (u - self.y[0])
         
         def sun_warming(self, dy, rho=0.1):
             if rho != 0:
-                self.y[0] += rho * dy
+                self.dy += rho * dy
 
     def initialize_thermal_objects(self, y0=[20.5, 20.5, 20.5, 20.5]):
         for i in range(len(self.objekt_param)):

@@ -13,12 +13,12 @@ from model.room_model import RaumModell
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 40
-GENERATIONS = 20
+POPULATION_SIZE = 20
+GENERATIONS = 10
 MUTATION_RATE = 0.25
 TIME_SPAN = 15000
 
-sub_dir = "genetic_02"
+sub_dir = "genetic_03"
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -31,15 +31,15 @@ def create_log_directory(additional = ""):
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 
+# ==============================
+# Exponentiell Individuum generieren
+# ==============================
 #                             R    W    S    F    s    a    h    g    t   n
 default_matrix = np.matrix([[0.0, 0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Room
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.1, 0.0, 0.0, 0.1 ,1],  # Wall
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Storage
                             [0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1 ,1]]) # Floor
 
-# ==============================
-# Exponentiell Individuum generieren
-# ==============================
 def random_exp_individual(preset = default_matrix):
     individual = np.zeros_like(preset, float)
     for i in range(preset.shape[0]):
