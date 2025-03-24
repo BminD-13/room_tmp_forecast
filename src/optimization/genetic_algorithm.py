@@ -3,22 +3,22 @@ import sys
 import os
 import json
 import datetime
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+import evaluate
 
 sys.path.append(os.path.abspath('./src'))  
 from data_module.data_module_static import DataModuleStatic
 from model.room_model import RaumModell
+from data_visual.plots import *
 
 # ==============================
 # Parameter für den GA
 # ==============================
-POPULATION_SIZE = 40
-GENERATIONS = 20
+POPULATION_SIZE = 20
+GENERATIONS = 10
 MUTATION_RATE = 0.25
 TIME_SPAN = 15000
 
-sub_dir = "genetic_02"
+sub_dir = "genetic_03"
 
 # ==============================
 # Logging-Verzeichnis anlegen
@@ -31,15 +31,15 @@ def create_log_directory(additional = ""):
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 
+# ==============================
+# Exponentiell Individuum generieren
+# ==============================
 #                             R    W    S    F    s    a    h    g    t   n
 default_matrix = np.matrix([[0.0, 0.1, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Room
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.1, 0.0, 0.0, 0.1 ,1],  # Wall
                             [0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1 ,1],  # Storage
                             [0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1 ,1]]) # Floor
 
-# ==============================
-# Exponentiell Individuum generieren
-# ==============================
 def random_exp_individual(preset = default_matrix):
     individual = np.zeros_like(preset, float)
     for i in range(preset.shape[0]):
@@ -82,39 +82,6 @@ def load_param_from_json(root_dir, fitness_filter=-30000):
     return matrices
 
 # ==============================
-# Fitness-Funktion
-# ==============================
-def fitness_function(params, dataset, real_temp):
-    """Berechnet die Fitness eines Parametersatzes durch Simulation."""
-    model = RaumModell(dt=1, params=params)
-    tmp_pred = model.run_model(dataset)
-    room_tmp_pred = tmp_pred[0]
-    wall_tmp_pred_max = np.max(tmp_pred[1])
-    real_temp = np.array(real_temp)
-
-    min_length = min(len(room_tmp_pred), len(real_temp))
-    room_tmp_pred = room_tmp_pred[:min_length]
-    real_temp = real_temp[:min_length]
-
-    # Fehlerberechnung
-    quadr_error = np.sum((room_tmp_pred - real_temp) ** 2)
-
-    # Gradientendifferenz
-    pred_grad = np.diff(room_tmp_pred)
-    real_grad = np.diff(real_temp)
-    gradient_error = np.sum((pred_grad - real_grad) ** 2)
-
-    # Normalisierung
-    sigma_real = np.std(real_temp)
-    total_error = (quadr_error + gradient_error) / (sigma_real + 1e-6)
-
-    # Unrealistische Wandtemperatur 
-    if wall_tmp_pred_max > 30:
-        total_error *= wall_tmp_pred_max / 30
-
-    return -total_error  # Negativer Fehler für Maximierung
-
-# ==============================
 # Selektion, Crossover, Mutation
 # ==============================
 def selection(population, scores):
@@ -136,74 +103,6 @@ def mutate(individual, mutation_rate=0.1):
                 else:
                     individual[i, j] *= np.random.exponential(0.05)
     return individual
-
-# ==============================
-# Vergleichsplot: Vorhersage vs. Tatsächliche Temperatur
-# ==============================
-def plot_full_data(best_params, dataset, log_dir):
-    """Plottet die Modellvorhersage gegen die tatsächlichen Werte mit mehreren Subplots."""
-    model = RaumModell(dt=1, params=best_params)
-    tmp_pred = model.run_model(dataset)
-
-    fig = plt.figure(figsize=(10, 15))  # Gesamthöhe der Figur    fig.suptitle("Modellvorhersage vs. Tatsächliche Temperatur", fontsize=14)
-    gs = gridspec.GridSpec(3, 1, height_ratios=[12, 5, 1])  # Höhenverhältnisse für die 5 Subplots
-    axes = []
-    for i in range(3):
-        axes.append(fig.add_subplot(gs[i]))
-
-    # 1. Tatsächliche Temperatur
-    axes[0].plot(dataset["tmpAmbient"], label="Außentemperatur", color="cyan", linestyle="-")
-    axes[0].plot(dataset["tmpRoom"], label="Tatsächliche Temperatur", color="blue", linestyle="-")
-    axes[0].plot(tmp_pred[0], label="Raum", color="red", linestyle="dashed")
-    axes[0].plot(tmp_pred[1], label="Wand", color="yellow", linestyle="dashed")
-    axes[0].plot(tmp_pred[2], label="Inventar", color="green", linestyle="dashed")
-    axes[0].plot(tmp_pred[3], label="Boden", color="orange", linestyle="dashed")
-    axes[0].set_ylabel("Temperatur [°C]")
-    axes[0].legend()
-    axes[0].grid(True)
-
-    # 2. SunPower
-    axes[1].plot(dataset["sunPower"], label="sunPower", color="red", linestyle="-")
-    axes[1].plot(dataset["elevation"], label="elevation", color="orange", linestyle="-")
-    axes[1].set_ylabel("val [0-1023]")
-    axes[1].legend()
-    axes[1].grid(True)
-
-    # 3. Heizleistung
-    axes[2].plot(dataset["xHeating"], label="Heizung", color="red", linestyle="-")
-    axes[2].set_ylabel("Leistung")
-    axes[2].legend()
-    axes[2].grid(True)
-
-    # Layout anpassen und speichern
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.savefig(os.path.join(log_dir, "prediction_vs_actual.png"))
-    plt.close()
-
-    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
-
-def plot_prediction_vs_actual(best_params, dataset, log_dir):
-    """Plottet die Modellvorhersage gegen die tatsächlichen Werte."""
-    model = RaumModell(dt=1, params=best_params)
-    tmp_pred = model.run_model(dataset)
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(dataset["tmpRoom"], label="Tatsächliche Temperatur", color="blue", linestyle="-")
-    plt.plot(tmp_pred[0], label="Raum", color="red", linestyle="dashed")
-    plt.plot(tmp_pred[1], label="Wand", color="yellow", linestyle="dashed")
-    plt.plot(tmp_pred[2], label="Inventar", color="green", linestyle="dashed")
-    plt.plot(tmp_pred[3], label="Boden", color="orange", linestyle="dashed")
-    plt.xlabel("Zeit")
-    plt.ylabel("Temperatur [°C]")
-    plt.title("Modellvorhersage vs. Tatsächliche Temperatur")
-    plt.legend()
-    plt.grid(True)
-
-    # Speichern des Plots
-    plt.savefig(os.path.join(log_dir, "prediction_vs_actual.png"))
-    plt.close()
-
-    print(f"Vergleichsplot gespeichert unter: {log_dir}/prediction_vs_actual.png")
 
 import random
 
@@ -239,7 +138,7 @@ def genetic_algorithm():
         # dataset.reset_index(drop=True, inplace=True)
         # real_temp = dataset["tmpRoom"]
 
-        scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+        scores = [evaluate.fitness(ind, dataset, real_temp) for ind in population]
 
         # Beste Fitness & Parameter speichern
         if np.all(np.isnan(scores)):  
@@ -324,7 +223,7 @@ def genetic_local_algo(folder_with_json_files):
 
     for generation in range(GENERATIONS):
 
-        scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+        scores = [evaluate.fitness(ind, dataset, real_temp) for ind in population]
 
         # Beste Fitness & Parameter speichern
         if np.all(np.isnan(scores)):  
@@ -404,7 +303,7 @@ def filter_results_by_fitness(folder_with_json_files, n=200):
     dataset = DataModule.get_df()
     real_temp = dataset["tmpRoom"]
 
-    scores = [fitness_function(ind, dataset, real_temp) for ind in population]
+    scores = [evaluate.fitness(ind, dataset, real_temp) for ind in population]
     
     if np.all(np.isnan(scores)):  
         print("Alle Werte sind NaN! Kein valider Maximalwert.")
@@ -457,21 +356,6 @@ def selection_for_best(population, scores, num_parents):
     selected_parents = [indiv for indiv, _ in sorted_population[:num_parents]]
     
     return selected_parents
-
-# ==============================
-# Fitness-Plot-Funktion
-# ==============================
-def plot_fitness(fitness_history, log_dir):
-    """Erstellt und speichert den Fitness-Plot."""
-    plt.figure(figsize=(10, 5))
-    plt.plot(range(1, len(fitness_history) + 1), np.abs(fitness_history), marker="o", linestyle="-", color="b")
-    plt.yscale("log")    
-    plt.xlabel("Generation")
-    plt.ylabel("Fitness")
-    plt.title("Fitness-Entwicklung über Generationen")
-    plt.grid(True)
-    plt.savefig(os.path.join(log_dir, "fitness_plot.png"))
-    plt.close()
 
 # ==============================
 # Starten des Algorithmus
